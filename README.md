@@ -29,3 +29,14 @@ Nairobi, Kenya (EAT, UTC+3) · Open to senior full-stack, IoT and platform roles
 
 - Re-architecting **MatConnect** for production scale: event-driven ingestion, a documented architecture and its trade-offs.
 - Writing about what I build on [DEV](https://dev.to/megalodon).
+
+#### Activity
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://streak-stats.demolab.com/?user=cliffkoome&background=0d1117&border=30363d&stroke=30363d&ring=3178c6&fire=3178c6&currStreakNum=f0f6fc&sideNums=f0f6fc&currStreakLabel=f0f6fc&sideLabels=f0f6fc&dates=9198a1&border_radius=6">
+  <img height="160" alt="GitHub contribution streak for cliffkoome: total contributions, current streak and longest streak" src="https://streak-stats.demolab.com/?user=cliffkoome&background=ffffff&border=d0d7de&stroke=d0d7de&ring=3178c6&fire=3178c6&currStreakNum=1f2328&sideNums=1f2328&currStreakLabel=1f2328&sideLabels=1f2328&dates=59636e&border_radius=6">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/languages-dark.svg">
+  <img height="160" alt="Most used languages across my public repositories" src="assets/languages-light.svg">
+</picture>
