@@ -7,6 +7,8 @@ contribute to under someone else's account.
 
 import json
 import os
+import sys
+import urllib.error
 import urllib.request
 from collections import Counter
 from html import escape
@@ -49,8 +51,17 @@ def language_totals():
         if not r["private"] and not r["fork"] and r["name"] not in SKIP_REPOS
     ]
     totals = Counter()
-    for name in names + EXTRA_REPOS:
+    for name in names:
         totals.update(get(f"repos/{name}/languages"))
+    for name in EXTRA_REPOS:
+        # These belong to other accounts and may be private or renamed, in
+        # which case the workflow token gets a 404. Skip rather than fail.
+        try:
+            totals.update(get(f"repos/{name}/languages"))
+        except urllib.error.HTTPError as e:
+            if e.code != 404:
+                raise
+            print(f"warning: skipping {name}: not found or not accessible", file=sys.stderr)
     for lang in SKIP_LANGUAGES:
         totals.pop(lang, None)
     return totals
