@@ -11,6 +11,11 @@ on:
 permissions:
   contents: write
 
+# Queue overlapping runs so two of them never race to push the card.
+concurrency:
+  group: language-card
+  cancel-in-progress: false
+
 jobs:
   render:
     runs-on: ubuntu-latest
@@ -29,4 +34,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Update language card"
+          git pull --rebase
           git push
