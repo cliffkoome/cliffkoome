@@ -236,26 +236,74 @@ def focus(t):
     return svg("focus", h, t, body, title="Current focus: " + "; ".join(f"{a}: {b}" for a, b in FOCUS))
 
 
-def stack(totals, t):
-    top = totals.most_common(7)
+# Toolbox: what I build with, grouped by layer. (slug in icons.json, label)
+# Icons are Simple Icons (CC0), vendored in icons.json so nothing loads at view time.
+TOOLBOX = [
+    ("languages", [("typescript", "TypeScript"), ("python", "Python"), ("cplusplus", "C/C++"),
+                   ("go", "Go"), ("kotlin", "Kotlin"), ("dart", "Dart")]),
+    ("web + backend", [("nodedotjs", "Node.js"), ("nextdotjs", "Next.js"), ("react", "React"),
+                       ("fastapi", "FastAPI"), ("postgresql", "Postgres"), ("prisma", "Prisma")]),
+    ("embedded + iot", [("espressif", "ESP32"), ("arduino", "Arduino"), ("platformio", "PlatformIO"),
+                        ("bluetooth", "BLE"), ("firebase", "Firebase")]),
+    ("mobile", [("flutter", "Flutter"), ("expo", "Expo"), ("android", "Android")]),
+    ("data + ai", [("pandas", "pandas"), ("scikitlearn", "sklearn"), ("ollama", "Ollama"),
+                   ("googlegemini", "Gemini")]),
+    ("ship", [("githubactions", "Actions"), ("docker", "Docker"), ("nginx", "Nginx"),
+              ("ubuntu", "Ubuntu"), ("vercel", "Vercel")]),
+]
+
+
+def toolbox(totals, t):
+    with open(os.path.join(os.path.dirname(__file__), "icons.json")) as f:
+        icons = json.load(f)
+    colw, rowh, top = (W - 96 - 40) / 2, 84, 62
+    rows_n = (len(TOOLBOX) + 1) // 2
+    bar_y = top + rows_n * rowh + 18
+    h = bar_y + 62
+    parts, k = [], 0
+    for gi, (group, items) in enumerate(TOOLBOX):
+        gx = 48 + (gi % 2) * (colw + 40)
+        gy = top + (gi // 2) * rowh
+        parts.append(f'<text x="{gx:.0f}" y="{gy}" class="lab" font-size="10" style="fill:{t['a1']}">{escape(group.upper())}</text>')
+        for ii, (slug, name) in enumerate(items):
+            x = gx + ii * 62
+            sc = 22 / 24
+            parts.append(
+                f'<g class="up" style="animation-delay:{.1 + k * .035:.2f}s">'
+                f'<g transform="translate({x + 20:.0f} {gy + 14}) scale({sc:.3f})"><path d="{icons[slug]["d"]}"/></g>'
+                f'<text x="{x + 31:.0f}" y="{gy + 52}" class="m" font-size="9.5" text-anchor="middle" fill="{t["muted"]}">{escape(name)}</text></g>'
+            )
+            k += 1
+    # language share: one thin segmented bar with an inline legend
+    langs = [(l, n) for l, n in totals.most_common(6)]
     total = sum(totals.values())
-    h = 82 + len(top) * 32
-    rows = []
-    for i, (lang, n) in enumerate(top):
-        y = 74 + i * 32
-        pct = 100 * n / total
-        bw = (W - 330) * pct / (100 * top[0][1] / total)
+    bw, x = W - 96, 48.0
+    segs, legend = [], []
+    for i, (lang, n) in enumerate(langs):
+        w = bw * n / total
         col = languages.COLOURS.get(lang, "#8b949e")
-        rows.append(
-            f'<g class="up" style="animation-delay:{.1 + i * .08:.2f}s">'
-            f'<text x="48" y="{y + 4}" class="m" font-size="13" fill="{t["text"]}">{escape(lang)}</text>'
-            f'<rect x="190" y="{y - 6}" width="{W - 330}" height="10" rx="5" fill="{t["panel"]}"/>'
-            f'<rect class="bar" style="animation-delay:{.3 + i * .08:.2f}s" x="190" y="{y - 6}" width="{bw:.1f}" height="10" rx="5" fill="{col}"/>'
-            f'<text x="{W - 48}" y="{y + 4}" class="m" font-size="13" text-anchor="end" fill="{t["muted"]}">{pct:.1f}%</text></g>'
-        )
-    css = ".bar { transform-box: fill-box; transform-origin: left; animation: grow 1.2s cubic-bezier(.2,.7,.2,1) backwards; }\n@keyframes grow { from { transform: scaleX(0); } }"
-    body = f'{label(48, 38, "stack / share of code in public repos", t)}{"".join(rows)}'
-    return svg("stack", h, t, body, css, "Languages: " + ", ".join(f"{l} {100 * n / total:.0f}%" for l, n in top))
+        segs.append(f'<rect x="{x:.1f}" y="{bar_y + 14}" width="{max(w - 2, 1):.1f}" height="6" rx="3" fill="{col}"/>')
+        x += w
+    if x < 48 + bw - 1:  # everything else, so the bar spans the full share
+        segs.append(f'<rect x="{x:.1f}" y="{bar_y + 14}" width="{48 + bw - x:.1f}" height="6" rx="3" fill="{t["dim"]}"/>')
+    lx = 48
+    for lang, n in langs:
+        txt = f"{lang} {100 * n / total:.0f}%"
+        col = languages.COLOURS.get(lang, "#8b949e")
+        legend.append(f'<circle cx="{lx + 4}" cy="{bar_y + 39}" r="3.5" fill="{col}"/>'
+                      f'<text x="{lx + 12}" y="{bar_y + 43}" class="m" font-size="11" fill="{t["muted"]}">{escape(txt)}</text>')
+        lx += 22 + len(txt) * 6.8
+    css = ".seg { transform-box: fill-box; transform-origin: left; animation: grow 1.4s cubic-bezier(.2,.7,.2,1) backwards .6s; }\n" \
+          "@keyframes grow { from { transform: scaleX(0); } }"
+    body = (
+        f'{label(48, 38, "toolbox / what I build with", t)}'
+        f'<g fill="{t["text"]}" fill-opacity=".88">{"".join(parts)}</g>'
+        f'<line x1="48" y1="{bar_y - 8}" x2="{W - 48}" y2="{bar_y - 8}" stroke="{t["line"]}"/>'
+        f'{label(48, bar_y + 4, "code in public repos", t)}'
+        f'<g class="seg">{"".join(segs)}</g>{"".join(legend)}'
+    )
+    names = "; ".join(f"{g}: {', '.join(n for _, n in items)}" for g, items in TOOLBOX)
+    return svg("toolbox", h, t, body, css, f"Toolbox. {names}. Languages: " + ", ".join(f"{l} {100 * n / total:.0f}%" for l, n in langs))
 
 
 def projects(d, t):
@@ -330,7 +378,7 @@ def main():
         out = {
             "hero": hero(d, portrait[name], t),
             "focus": focus(t),
-            "stack": stack(totals, t),
+            "toolbox": toolbox(totals, t),
             "projects": projects(d, t),
             "activity": activity(d, t),
         }
