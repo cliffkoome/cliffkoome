@@ -142,8 +142,8 @@ def label(x, y, text, t, anchor="start"):
 def hero(d, portrait, t):
     h = 380
     cx, cy, rr = W - 40 - 133, h / 2, 154      # orbit ring around the portrait
-    R = rr - 8                                 # everything inside the ring stays within this circle
-    ph = 300                                   # portrait box; portrait.py draws at 336x420
+    R = rr - 18                                # everything inside the ring stays within this circle, with a gap
+    ph = round(2 * R * 1.03)                   # portrait box; portrait.py draws at 336x420
     pw = round(ph * 336 / 420)
     px, py = cx - pw / 2, cy + R - ph          # shoulders rest on the bottom of the circle
 
