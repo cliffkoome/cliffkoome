@@ -56,8 +56,3 @@ networks drop, devices lie, or money is on the line.
 - **Keep the hot path apart from the record.** Telemetry, events and state each get the store that fits.
 - **Failure is the normal case.** InstaScreen never shows a half-downloaded image; MatConnect never counts a trip twice.
 - **Write it down.** ADRs in [MatConnect](https://github.com/cliffkoome/MatConnect/tree/main/docs/adr) and [InstaScreen](https://github.com/cliffkoome/InstaScreen/tree/main/docs/adr), plus a [scaling plan](https://github.com/cliffkoome/MatConnect#scaling).
-
-<picture>
-  <source media="(prefers-color-scheme: light)" srcset="assets/profile/activity-light.svg">
-  <img width="100%" alt="Contribution activity over the last 12 months" src="assets/profile/activity-dark.svg">
-</picture>

@@ -111,17 +111,11 @@ def fetch():
         for w in data["contributionsCollection"]["contributionCalendar"]["weeks"]
     ]
     days = [d for w in weeks for d in w]
-    longest = run = 0
-    for _, n, _ in days:
-        run = run + 1 if n else 0
-        longest = max(longest, run)
     active = sum(1 for _, n, _ in days if n)
     return {
         "since": datetime.fromisoformat(data["createdAt"].replace("Z", "+00:00")).year,
         "repos": data["repositories"]["totalCount"],
         "total": data["contributionsCollection"]["contributionCalendar"]["totalContributions"],
-        "weeks": weeks,
-        "longest": longest,
         "active": active,
         "projects": [(data[f"p{i}"], note, tags) for i, (_, note, tags) in enumerate(PROJECTS)],
         "more": sorted(((data[f"m{i}"], name, note) for i, (_, name, note) in enumerate(MORE)),
@@ -431,34 +425,6 @@ def more(d, t):
     return svg("more", h, t, body, css, "More I've built: " + ", ".join(n for _, n, _ in items))
 
 
-def activity(d, t):
-    weeks = d["weeks"]
-    size, gap = 12, 3
-    gx = (W - len(weeks) * (size + gap) + gap) / 2
-    gy = 64
-    h = gy + 7 * (size + gap) + 70
-    cols = []
-    for wi, week in enumerate(weeks):
-        cells = "".join(
-            f'<rect x="{gx + wi * (size + gap):.1f}" y="{gy + date.fromisoformat(day).isoweekday() % 7 * (size + gap)}" '
-            f'width="{size}" height="{size}" rx="2.5" fill="{t["cell"][lvl]}"><title>{day}: {n}</title></rect>'
-            for day, n, lvl in week
-        )
-        cols.append(f'<g class="col" style="animation-delay:{wi * .045:.2f}s">{cells}</g>')
-    css = """.col { animation: wave 4.8s ease-in-out infinite; }
-@keyframes wave { 0%, 100% { opacity: 1; } 12% { opacity: .35; } 24% { opacity: 1; } }"""
-    y = h - 30
-    body = (
-        f'{label(48, 38, "activity / contribution field, last 12 months", t)}'
-        + "".join(cols)
-        + f'<text x="48" y="{y}" class="m" font-size="13" fill="{t["text"]}">{d["total"]:,} <tspan fill="{t["muted"]}">contributions</tspan>'
-        f'   ·   {d["active"]} <tspan fill="{t["muted"]}">active days</tspan>'
-        f'   ·   {d["longest"]} <tspan fill="{t["muted"]}">day longest streak</tspan></text>'
-        + "".join(f'<rect x="{W - 48 - (5 - i) * 16}" y="{y - 10}" width="11" height="11" rx="2" fill="{c}"/>' for i, c in enumerate(t["cell"]))
-    )
-    return svg("activity", h, t, body, css, f"{d['total']} contributions in the last year, {d['active']} active days, longest streak {d['longest']} days")
-
-
 def main():
     d = fetch()
     portrait = {}
@@ -474,7 +440,6 @@ def main():
             "toolbox": toolbox(totals, t),
             "projects": projects(d, t),
             "more": more(d, t),
-            "activity": activity(d, t),
         }
         for section, content in out.items():
             with open(f"assets/profile/{section}-{name}.svg", "w") as f:
