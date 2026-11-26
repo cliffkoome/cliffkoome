@@ -3,13 +3,12 @@
   <img width="100%" alt="Clifford Karani: full-stack software engineer, IoT, embedded systems and systems architecture. Nairobi, Kenya." src="assets/profile/hero-dark.svg">
 </picture>
 
-I design systems where hardware, phones and cloud services must agree on what's true, even when
-networks drop, devices lie, or money is on the line.
+I build software that talks to hardware, and lately I spend just as much time trying to break it.
 
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="assets/profile/focus-light.svg">
-  <img width="100%" alt="Current focus: devices to cloud, built for failure, decisions on record" src="assets/profile/focus-dark.svg">
+  <img width="100%" alt="Current focus: security (finding and fixing vulnerabilities), hardware design (schematics and boards), training and fine-tuning ML models" src="assets/profile/focus-dark.svg">
 </picture>
 
 <picture>

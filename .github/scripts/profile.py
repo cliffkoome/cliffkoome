@@ -26,9 +26,9 @@ TAGS = ["IoT", "Embedded systems", "Systems architecture"]
 LOCATION = "Nairobi, Kenya"
 
 FOCUS = [
-    ("Devices to cloud", "Hardware, phones and cloud services that agree on what's true."),
-    ("Built for failure", "Dropped networks and duplicate events are the normal case."),
-    ("Decisions on record", "Trade-offs written down as ADRs, with a scaling plan."),
+    ("Security", "Finding vulnerabilities and fixing them, offence and defence."),
+    ("Hardware design", "Drawing schematics and boards, not just wiring dev kits."),
+    ("Training models", "Building and fine-tuning my own ML models, from the data up."),
 ]
 
 # Selected work: repo, two short lines about it, tags to show (chosen here, not
