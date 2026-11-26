@@ -115,7 +115,7 @@ def fetch():
     }} }}""")["user"]
     return {
         "total": data["contributionsCollection"]["contributionCalendar"]["totalContributions"],
-        "commits": search_count("commits", f"author:{USER}"),
+        "commits": search_count("commits", f"author:{USER} is:public"),
         "prs": search_count("issues", f"is:pr author:{USER} is:merged is:public"),
         "projects": [(data[f"p{i}"], note, tags) for i, (_, note, tags) in enumerate(PROJECTS)],
         "more": sorted(((data[f"m{i}"], name, note) for i, (_, name, note) in enumerate(MORE)),
