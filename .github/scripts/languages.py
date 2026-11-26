@@ -14,7 +14,9 @@ from collections import Counter
 from html import escape
 
 USER = "cliffkoome"
-EXTRA_REPOS = ["davidongora/Agenti"]
+# Repos I contribute to under other accounts. Public only: the workflow token
+# cannot read private ones, and local runs must match what the profile shows.
+EXTRA_REPOS = []
 # Course and workshop repos: the code in them isn't mine.
 SKIP_REPOS = {"cliffkoome", "Kubernetes-Course-Labs", "react-workshop"}
 SKIP_LANGUAGES = {"Tape", "Dockerfile", "Makefile", "Procfile", "Batchfile"}
