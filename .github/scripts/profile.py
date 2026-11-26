@@ -157,17 +157,19 @@ def hero(d, portrait, t):
     pw = round(ph * 336 / 420)
     px, py = cx - pw / 2, cy + R - ph          # shoulders rest on the bottom of the circle
 
-    stats = [
-        (f"{d['total']:,}", "contributions"),
-        (f"{d['active30']}/30", "days active, last 30"),
-        (f"{d['langs']}", "languages"),
+    stats = [  # value, label, optional second line
+        (f"{d['total']:,}", "contributions", ""),
+        (f"{d['active30']}", "days active", "(last 30 days)"),
+        (f"{d['langs']}", "languages", ""),
     ]
     stat_svg = []
-    for i, ((v, k), x) in enumerate(zip(stats, (48, 200, 380))):
+    for i, ((v, k, sub), x) in enumerate(zip(stats, (48, 200, 330))):
+        note = (f'<text x="{x}" y="{h - 25}" class="m" font-size="10" fill="{t["muted"]}">{escape(sub)}</text>'
+                if sub else "")
         stat_svg.append(
             f'<g class="up" style="animation-delay:{1.1 + i * .12:.2f}s">'
             f'<text x="{x}" y="{h - 62}" class="m" font-size="24" font-weight="600" fill="{t["text"]}">{escape(v)}</text>'
-            f'<text x="{x}" y="{h - 40}" class="lab" font-size="10" letter-spacing="1.5">{escape(k.upper())}</text></g>'
+            f'<text x="{x}" y="{h - 40}" class="lab" font-size="10" letter-spacing="1.5">{escape(k.upper())}</text>{note}</g>'
         )
     stats_end = 516
 
