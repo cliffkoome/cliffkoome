@@ -6,15 +6,13 @@
 I design systems where hardware, phones and cloud services must agree on what's true, even when
 networks drop, devices lie, or money is on the line.
 
-Open to senior full-stack, IoT and platform roles · [koomekoome902@gmail.com](mailto:koomekoome902@gmail.com) ·
+[koomekoome902@gmail.com](mailto:koomekoome902@gmail.com) ·
 [LinkedIn](https://www.linkedin.com/in/cliffkoome/) · [DEV](https://dev.to/megalodon)
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="assets/profile/focus-light.svg">
   <img width="100%" alt="Current focus: devices to cloud, built for failure, decisions on record" src="assets/profile/focus-dark.svg">
 </picture>
-
-#### Selected work
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="assets/profile/projects-light.svg">
@@ -33,8 +31,6 @@ Open to senior full-stack, IoT and platform roles · [koomekoome902@gmail.com](m
 | [**typeghast**](https://github.com/cliffkoome/typeghast) | A terminal typing game played while a coding agent works. Ghosts multiply as the agent's context window fills. | Tails agent session logs in real time, a local open-weight model (Gemma 4 via Ollama) turns them into text to type; nothing leaves the machine. [Write-up on DEV →](https://dev.to/megalodon/typeghast-a-typing-game-haunted-by-your-coding-agents-context-window-5hkn) | Go, Bubble Tea, Ollama |
 
 </details>
-
-#### Toolbox
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="assets/profile/toolbox-light.svg">
