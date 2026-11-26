@@ -30,16 +30,32 @@ FOCUS = [
     ("Decisions on record", "Trade-offs written down as ADRs, with a scaling plan."),
 ]
 
-# Featured repos, with a one-line note on the architecture worth a look and
-# the tags to show (chosen here, not taken from repo topics, so they stay accurate).
+# Selected work: repo, two short lines about it, tags to show (chosen here, not
+# taken from repo topics, so they stay accurate).
 PROJECTS = [
-    ("MatConnect", "Live GPS kept apart from the Postgres system of record; a leased ETA job safe on VM, cron or many instances.",
-     ["neon-postgres", "prisma", "firebase-rtdb"]),
-    ("InstaScreen", "Checksummed wire format chunked through Firebase to fit ~320 KB of SRAM; ETag compare-and-set, no backend.",
+    ("MatConnect", ["Live matatu ETAs from in-vehicle GPS, with SMS", "alerts. A leased job never counts a trip twice."],
+     ["neon-postgres", "prisma", "firebase"]),
+    ("InstaScreen", ["Cloud-synced ESP32 photo frame. Checksummed", "chunks fit 320 KB of RAM, with no backend."],
      ["esp32", "platformio", "python"]),
-    ("typeghast", "Tails coding-agent logs live; a local Gemma model writes the text to type. Nothing leaves the machine.",
+    ("typeghast", ["A terminal typing game haunted by your coding", "agent's context rot. Runs a local Gemma model."],
      ["bubbletea", "ollama", "gemma"]),
+    ("haki-afya", ["Checks a hospital bill against SHA tariffs.", "AI reads the bill; plain code decides."],
+     ["fastapi", "react", "gemma-4"]),
 ]
+
+# More I've built: repo, display name, two short lines. Placed on a launch line
+# in the order the repos were created.
+MORE = [
+    ("ds-loadbalancer", "ds-loadbalancer", ["consistent hashing,", "self-healing replicas"]),
+    ("chamaconnect-bug-patch", "ChamaConnect fixes", ["15 vulnerabilities", "found, then patched"]),
+    ("echo-reach", "Echo Reach", ["climate alerts by", "phone call"]),
+    ("zephyr", "Zephyr", ["offline AI tutor", "for 8 GB laptops"]),
+    ("hack-mavericks-mtah2027", "Hack Mavericks", ["ball-possession model,", "reproducible to the byte"]),
+    ("local-llm-speedtune", "llm-speedtune", ["local LLMs 3.1x", "faster, by measuring"]),
+]
+
+ICON_FOR = {"TypeScript": "typescript", "Python": "python", "C++": "cplusplus", "Go": "go",
+            "JavaScript": "javascript", "Kotlin": "kotlin", "Dart": "dart"}
 
 W = 860
 FONT = "ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, Consolas, monospace"
@@ -79,10 +95,10 @@ def graphql(query):
 
 
 def fetch():
-    names = " ".join(
-        f'p{i}: repository(name: "{n}") {{ name url description pushedAt primaryLanguage {{ name color }} }}'
-        for i, (n, _, _) in enumerate(PROJECTS)
-    )
+    fields = ("name createdAt pushedAt primaryLanguage { name color } "
+              "languages(first: 1, orderBy: {field: SIZE, direction: DESC}) { totalSize edges { size } }")
+    names = " ".join(f'p{i}: repository(name: "{n}") {{ {fields} }}' for i, (n, _, _) in enumerate(PROJECTS))
+    names += " " + " ".join(f'm{i}: repository(name: "{n}") {{ {fields} }}' for i, (n, _, _) in enumerate(MORE))
     data = graphql(f"""{{ user(login: "{USER}") {{
         createdAt
         repositories(ownerAffiliations: OWNER, privacy: PUBLIC, isFork: false) {{ totalCount }}
@@ -108,6 +124,8 @@ def fetch():
         "longest": longest,
         "active": active,
         "projects": [(data[f"p{i}"], note, tags) for i, (_, note, tags) in enumerate(PROJECTS)],
+        "more": sorted(((data[f"m{i}"], name, note) for i, (_, name, note) in enumerate(MORE)),
+                       key=lambda m: m[0]["createdAt"]),
     }
 
 
@@ -306,36 +324,111 @@ def toolbox(totals, t):
     return svg("toolbox", h, t, body, css, f"Toolbox. {names}. Languages: " + ", ".join(f"{l} {100 * n / total:.0f}%" for l, n in langs))
 
 
+def ago(iso):
+    days = (date.today() - datetime.fromisoformat(iso.replace("Z", "+00:00")).date()).days
+    if days < 1:
+        return "today"
+    if days < 45:
+        return f"{days}d ago"
+    return f"{round(days / 30)}mo ago"
+
+
+def lang_share(p):
+    l = p["languages"]
+    return round(100 * l["edges"][0]["size"] / l["totalSize"]) if l["totalSize"] else 0
+
+
 def projects(d, t):
-    h = 122 + len(d["projects"]) * 96
-    rows = []
+    """Selected work as a 2x2 grid of terminal-style cards with a language gauge."""
+    cw, ch, gap, top = (W - 96 - 20) / 2, 158, 20, 66
+    rows = (len(d["projects"]) + 1) // 2
+    h = top + rows * ch + (rows - 1) * gap + 40
+    cards = []
     for i, (p, note, tags) in enumerate(d["projects"]):
-        y = 60 + i * 96
+        x = 48 + (i % 2) * (cw + gap)
+        y = top + (i // 2) * (ch + gap)
         lang = p["primaryLanguage"] or {"name": "", "color": t["muted"]}
-        topics = tags
-        pushed = datetime.fromisoformat(p["pushedAt"].replace("Z", "+00:00")).strftime("%b %Y")
-        meta = f"{lang['name']}   ·   {'  '.join('#' + x for x in topics)}" if topics else lang["name"]
-        rows.append(
-            f'<g class="up" style="animation-delay:{.15 + i * .2:.2f}s">'
-            f'<circle cx="64" cy="{y + 26}" r="7" fill="{t["bg"]}" stroke="{lang["color"] or t["a1"]}" stroke-width="2"/>'
-            f'<circle cx="64" cy="{y + 26}" r="3" fill="{lang["color"] or t["a1"]}" class="node" style="animation-delay:{i * .6:.1f}s"/>'
-            f'<rect x="92" y="{y}" width="{W - 140}" height="80" rx="10" fill="{t["panel"]}" stroke="{t["line"]}"/>'
-            f'<text x="112" y="{y + 30}" class="s" font-size="17" font-weight="650" fill="{t["text"]}">{escape(p["name"])}</text>'
-            f'<text x="{W - 68}" y="{y + 30}" class="m" font-size="11" text-anchor="end" fill="{t["muted"]}">updated {pushed}</text>'
-            f'<text x="112" y="{y + 52}" class="s" font-size="12.5" fill="{t["muted"]}">{escape(note)}</text>'
-            f'<text x="112" y="{y + 70}" class="m" font-size="11" fill="{t["a1"]}">{escape(meta)}</text></g>'
-        )
-    line_end = 60 + (len(d["projects"]) - 1) * 96 + 26
-    css = f""".trace {{ stroke-dasharray: 4 6; animation: flow 1.6s linear infinite; }}
-@keyframes flow {{ to {{ stroke-dashoffset: -20; }} }}
-.node {{ animation: blink 2.4s ease-in-out infinite; }}"""
-    body = (
-        f'{label(48, 38, "selected work / project constellation", t)}'
-        f'<line class="trace" x1="64" y1="86" x2="64" y2="{line_end}" stroke="{t["dim"]}" stroke-width="1.5"/>'
-        + "".join(rows)
-        + f'<text x="{W - 48}" y="{h - 26}" class="m" font-size="11" text-anchor="end" fill="{t["muted"]}">design decisions (ADRs) in MatConnect and InstaScreen →</text>'
-    )
+        col = lang["color"] or t["a1"]
+        pct = lang_share(p)
+        r = 24
+        circ = 2 * 3.14159 * r
+        gx, gy = x + cw - 46, y + 82
+        chips, cx = [], x + 18
+        for tag in tags:
+            w = 16 + len(tag) * 6.1
+            chips.append(f'<rect x="{cx:.0f}" y="{y + 112}" width="{w:.0f}" height="20" rx="10" fill="none" stroke="{t["line"]}"/>'
+                         f'<text x="{cx + w / 2:.0f}" y="{y + 126}" class="m" font-size="10" text-anchor="middle" fill="{t["muted"]}">{escape(tag)}</text>')
+            cx += w + 6
+        desc = "".join(f'<tspan x="{x + 18:.0f}" dy="{0 if k == 0 else 17}">{escape(line)}</tspan>' for k, line in enumerate(note))
+        cards.append(f"""<g class="up" style="animation-delay:{.15 + i * .15:.2f}s">
+<rect x="{x:.0f}" y="{y}" width="{cw:.0f}" height="{ch}" rx="10" fill="{t['panel']}" stroke="{t['line']}"/>
+<line x1="{x:.0f}" y1="{y + 26}" x2="{x + cw:.0f}" y2="{y + 26}" stroke="{t['line']}"/>
+<text x="{x + 16:.0f}" y="{y + 17}" class="m" font-size="10" fill="{t['muted']}">· {escape(p['name'])}</text>
+<circle cx="{x + cw - 16:.0f}" cy="{y + 13}" r="3" fill="{t['a1']}" class="live"/>
+<text x="{x + 18:.0f}" y="{y + 52}" class="m" font-size="16" font-weight="700" fill="{t['text']}">{escape(p['name'])}<tspan class="cur" fill="{t['a1']}"> _</tspan></text>
+<text y="{y + 74}" class="s" font-size="12" fill="{t['muted']}">{desc}</text>
+<circle cx="{gx:.0f}" cy="{gy - 28}" r="{r}" fill="none" stroke="{t['line']}" stroke-width="5"/>
+<circle cx="{gx:.0f}" cy="{gy - 28}" r="{r}" fill="none" stroke="{col}" stroke-width="5" stroke-linecap="round"
+  stroke-dasharray="{circ * pct / 100:.1f} {circ:.1f}" transform="rotate(-90 {gx:.0f} {gy - 28})" class="gauge" style="--c:{circ:.1f}"/>
+<text x="{gx:.0f}" y="{gy - 24}" class="m" font-size="11" font-weight="600" text-anchor="middle" fill="{t['text']}">{pct}%</text>
+<text x="{gx:.0f}" y="{gy + 10}" class="m" font-size="9.5" text-anchor="middle" fill="{t['muted']}">{escape(lang['name'])}</text>
+{''.join(chips)}
+<text x="{x + cw - 18:.0f}" y="{y + 126}" class="m" font-size="10" text-anchor="end" fill="{t['dim']}">updated {ago(p['pushedAt'])}</text>
+</g>""")
+    css = """.gauge { animation: gauge 1.4s cubic-bezier(.2,.7,.2,1) backwards .5s; }
+@keyframes gauge { from { stroke-dasharray: 0 var(--c); } }
+.live { animation: blink 2.4s ease-in-out infinite; }
+.cur { animation: blink 1.1s steps(1) infinite; }"""
+    body = (f'{label(48, 38, "selected work / projects.list", t)}'
+            f'<text x="{W - 48}" y="38" class="lab" text-anchor="end">{len(d["projects"])} projects</text>'
+            f'<line x1="48" y1="48" x2="{W - 48}" y2="48" stroke="{t["line"]}"/>'
+            + "".join(cards))
     return svg("projects", h, t, body, css, "Selected work: " + ", ".join(p["name"] for p, _, _ in d["projects"]))
+
+
+def more(d, t):
+    """More I've built: repos on a dated launch line, labels alternating above and below."""
+    with open(os.path.join(os.path.dirname(__file__), "icons.json")) as f:
+        icons = json.load(f)
+    items = d["more"]
+    h, ly = 330, 168
+    x0, x1 = 90, W - 90
+    step = (x1 - x0) / (len(items) - 1)
+    nodes = []
+    for i, (p, name, note) in enumerate(items):
+        x = x0 + i * step
+        lang = p["primaryLanguage"] or {"name": "", "color": t["muted"]}
+        col = lang["color"] or t["a1"]
+        slug = ICON_FOR.get(lang["name"])
+        icon = (f'<g transform="translate({x - 9:.1f} {ly - 9}) scale(.75)" fill="{col}"><path d="{icons[slug]["d"]}"/></g>'
+                if slug else "")
+        when = datetime.fromisoformat(p["createdAt"].replace("Z", "+00:00")).strftime("%b %Y")
+        above = i % 2 == 0
+        ty = ly - 92 if above else ly + 48
+        lines = "".join(f'<tspan x="{x:.1f}" dy="{0 if k == 0 else 14}">{escape(l)}</tspan>' for k, l in enumerate(note))
+        nodes.append(f"""<g class="up" style="animation-delay:{.3 + i * .18:.2f}s">
+<line x1="{x:.1f}" y1="{ly - 28 if above else ly + 28}" x2="{x:.1f}" y2="{ly - 40 if above else ly + 40}" stroke="{t['line']}"/>
+<g class="orb" style="transform-origin:{x:.1f}px {ly}px;animation-duration:{18 + i * 3}s"><circle cx="{x:.1f}" cy="{ly}" r="25" fill="none" stroke="{col}" stroke-opacity=".55" stroke-dasharray="8 6"/></g>
+<circle cx="{x:.1f}" cy="{ly}" r="18" fill="{t['bg']}" stroke="{col}" stroke-width="1.5"/>
+{icon}
+<text x="{x:.1f}" y="{ty}" class="m" font-size="9.5" text-anchor="middle" fill="{t['dim']}">{when}</text>
+<text x="{x:.1f}" y="{ty + 18}" class="s" font-size="13" font-weight="650" text-anchor="middle" fill="{t['text']}">{escape(name)}</text>
+<text y="{ty + 35}" class="s" font-size="10.5" text-anchor="middle" fill="{t['muted']}">{lines}</text>
+</g>""")
+    css = f""".orb {{ animation: spin 20s linear infinite; }}
+@keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+.flow {{ stroke-dasharray: 5 7; animation: flow 1.4s linear infinite; }}
+@keyframes flow {{ to {{ stroke-dashoffset: -24; }} }}
+.pulse {{ animation: travel 7s cubic-bezier(.45,0,.55,1) infinite; }}
+@keyframes travel {{ from {{ transform: translateX(0); opacity: 0; }} 8% {{ opacity: 1; }} 92% {{ opacity: 1; }} to {{ transform: translateX({x1 - x0:.0f}px); opacity: 0; }} }}"""
+    first = datetime.fromisoformat(items[0][0]["createdAt"].replace("Z", "+00:00")).strftime("%b %Y")
+    body = (f'{label(48, 38, "more i have built / launch sequence", t)}'
+            f'<text x="{W - 48}" y="38" class="lab" text-anchor="end">{len(items)} repos since {first.lower()}</text>'
+            f'<line x1="48" y1="48" x2="{W - 48}" y2="48" stroke="{t["line"]}"/>'
+            f'<line class="flow" x1="{x0 - 30}" y1="{ly}" x2="{x1 + 30}" y2="{ly}" stroke="{t["dim"]}" stroke-width="1.5"/>'
+            f'<circle class="pulse" cx="{x0}" cy="{ly}" r="3.5" fill="{t["a1"]}"/>'
+            + "".join(nodes))
+    return svg("more", h, t, body, css, "More I've built: " + ", ".join(n for _, n, _ in items))
 
 
 def activity(d, t):
@@ -380,6 +473,7 @@ def main():
             "focus": focus(t),
             "toolbox": toolbox(totals, t),
             "projects": projects(d, t),
+            "more": more(d, t),
             "activity": activity(d, t),
         }
         for section, content in out.items():

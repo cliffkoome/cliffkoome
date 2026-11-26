@@ -16,10 +16,10 @@ networks drop, devices lie, or money is on the line.
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="assets/profile/projects-light.svg">
-  <img width="100%" alt="Selected work: MatConnect, InstaScreen and typeghast" src="assets/profile/projects-dark.svg">
+  <img width="100%" alt="Selected work: MatConnect, InstaScreen, typeghast and Haki Afya" src="assets/profile/projects-dark.svg">
 </picture>
 
-[MatConnect](https://github.com/cliffkoome/MatConnect) · [InstaScreen](https://github.com/cliffkoome/InstaScreen) · [typeghast](https://github.com/cliffkoome/typeghast)
+<p align="center"><a href="https://github.com/cliffkoome/MatConnect">MatConnect</a> · <a href="https://github.com/cliffkoome/InstaScreen">InstaScreen</a> · <a href="https://github.com/cliffkoome/typeghast">typeghast</a> · <a href="https://github.com/cliffkoome/haki-afya">Haki Afya</a></p>
 
 <details>
 <summary><b>Architecture worth a look</b></summary>
@@ -37,15 +37,12 @@ networks drop, devices lie, or money is on the line.
   <img width="100%" alt="Toolbox: TypeScript, Python, C/C++, Go, Kotlin, Dart; Node.js, Next.js, React, FastAPI, Postgres, Prisma; ESP32, Arduino, PlatformIO, BLE, Firebase; Flutter, Expo, Android; pandas, scikit-learn, Ollama, Gemini; GitHub Actions, Docker, Nginx, Ubuntu, Vercel" src="assets/profile/toolbox-dark.svg">
 </picture>
 
-#### More I've built
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="assets/profile/more-light.svg">
+  <img width="100%" alt="More I've built: ds-loadbalancer, ChamaConnect fixes, Echo Reach, Zephyr, Hack Mavericks, local-llm-speedtune" src="assets/profile/more-dark.svg">
+</picture>
 
-- [**Haki Afya**](https://github.com/cliffkoome/haki-afya): checks a hospital bill against SHA tariffs in 30 seconds. AI reads, code decides.
-- [**ChamaConnect fixes**](https://github.com/cliffkoome/chamaconnect-bug-patch): 15 vulnerabilities found and patched in a live savings-group app.
-- [**local-llm-speedtune**](https://github.com/cliffkoome/local-llm-speedtune): local LLMs 3.1× faster, by measuring instead of guessing.
-- [**ds-loadbalancer**](https://github.com/cliffkoome/ds-loadbalancer): consistent hashing over self-healing Docker replicas.
-- [**Hack Mavericks**](https://github.com/cliffkoome/hack-mavericks-mtah2027): football ball-possession model, reproducible to the byte.
-- [**Zephyr**](https://github.com/cliffkoome/zephyr): an offline AI coding tutor that runs on an 8 GB laptop.
-- [**Echo Reach**](https://github.com/cliffkoome/echo-reach): climate alerts by phone call, in local languages.
+<p align="center"><a href="https://github.com/cliffkoome/ds-loadbalancer">ds-loadbalancer</a> · <a href="https://github.com/cliffkoome/chamaconnect-bug-patch">ChamaConnect fixes</a> · <a href="https://github.com/cliffkoome/echo-reach">Echo Reach</a> · <a href="https://github.com/cliffkoome/zephyr">Zephyr</a> · <a href="https://github.com/cliffkoome/hack-mavericks-mtah2027">Hack Mavericks</a> · <a href="https://github.com/cliffkoome/local-llm-speedtune">local-llm-speedtune</a></p>
 
 #### Awards
 
