@@ -160,6 +160,8 @@ def hero(d, emblems, t):
     ex, ey = cx - es / 2, cy - es / 2 - 16
     cyc = n * slot
     a, b = 100 * sweep / cyc, 100 * slot / cyc  # sweep end and slot end, as % of the cycle
+    ly = cy + R - 34                           # label baseline
+    la = a * (ly - 9 - (cy - R)) / (2 * R)     # when the line reaches the label's top: swap it then
 
     stats = [  # value, label, optional second line
         (f"{d['total']:,}", "contributions", ""),
@@ -196,7 +198,7 @@ def hero(d, emblems, t):
 @keyframes em {{ 0% {{ opacity: 1; clip-path: inset(0 0 100% 0); }} {a:.3f}%, {b:.3f}% {{ opacity: 1; clip-path: inset(0 0 0 0); }}
   {b + a:.3f}% {{ opacity: 1; clip-path: inset(100% 0 0 0); }} {b + a + .01:.3f}%, 100% {{ opacity: 0; clip-path: inset(100% 0 0 0); }} }}
 .el {{ animation: el {cyc}s linear infinite backwards; }}
-@keyframes el {{ 0%, {a * .35:.3f}% {{ opacity: 0; }} {a * .8:.3f}%, {b:.3f}% {{ opacity: 1; }} {b + a * .3:.3f}%, 100% {{ opacity: 0; }} }}
+@keyframes el {{ 0%, {la:.3f}% {{ opacity: 0; }} {la + .01:.3f}%, {b + la:.3f}% {{ opacity: 1; }} {b + la + .01:.3f}%, 100% {{ opacity: 0; }} }}
 .cur {{ animation: blink 1.1s steps(1) infinite; }}
 .live {{ animation: blink 2s ease-in-out infinite; }}
 .ring {{ transform-origin: {cx:.0f}px {cy:.0f}px; animation: spin 48s linear infinite; }}
