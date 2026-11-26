@@ -11,6 +11,7 @@ portrait is drawn once by portrait.py and read from assets/profile/portrait-*.sv
 """
 
 import json
+import re
 import os
 import urllib.request
 from datetime import date, datetime
@@ -54,6 +55,10 @@ MORE = [
     ("local-llm-speedtune", "llm-speedtune", ["local LLMs 3.1x", "faster, by measuring"]),
 ]
 
+# Repos whose docs/adr folders are counted for the "adrs written" stat.
+ADR_REPOS = ["MatConnect", "InstaScreen"]
+AWARDS = 3  # hackathon awards listed in the README
+
 ICON_FOR = {"TypeScript": "typescript", "Python": "python", "C++": "cplusplus", "Go": "go",
             "JavaScript": "javascript", "Kotlin": "kotlin", "Dart": "dart"}
 
@@ -76,7 +81,6 @@ THEMES = {
 
 PORTRAIT_FILE = "assets/profile/portrait-{theme}.svg"  # written by portrait.py
 
-LEVELS = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2, "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
 
 
 # ---------------------------------------------------------------- data
@@ -99,24 +103,18 @@ def fetch():
               "languages(first: 1, orderBy: {field: SIZE, direction: DESC}) { totalSize edges { size } }")
     names = " ".join(f'p{i}: repository(name: "{n}") {{ {fields} }}' for i, (n, _, _) in enumerate(PROJECTS))
     names += " " + " ".join(f'm{i}: repository(name: "{n}") {{ {fields} }}' for i, (n, _, _) in enumerate(MORE))
+    adrs = " ".join(f'a{i}: repository(name: "{n}") {{ object(expression: "HEAD:docs/adr") {{ ... on Tree {{ entries {{ name }} }} }} }}'
+                    for i, n in enumerate(ADR_REPOS))
     data = graphql(f"""{{ user(login: "{USER}") {{
-        createdAt
-        repositories(ownerAffiliations: OWNER, privacy: PUBLIC, isFork: false) {{ totalCount }}
-        contributionsCollection {{ contributionCalendar {{ totalContributions
-            weeks {{ contributionDays {{ date contributionCount contributionLevel }} }} }} }}
+        contributionsCollection {{ contributionCalendar {{ totalContributions }} }}
+        {adrs}
         {names}
     }} }}""")["user"]
-    weeks = [
-        [(d["date"], d["contributionCount"], LEVELS[d["contributionLevel"]]) for d in w["contributionDays"]]
-        for w in data["contributionsCollection"]["contributionCalendar"]["weeks"]
-    ]
-    days = [d for w in weeks for d in w]
-    active = sum(1 for _, n, _ in days if n)
+    adr_count = sum(1 for i in range(len(ADR_REPOS)) for e in (data[f"a{i}"]["object"] or {}).get("entries", [])
+                    if re.match(r"\d{4}-.+\.md$", e["name"]))
     return {
-        "since": datetime.fromisoformat(data["createdAt"].replace("Z", "+00:00")).year,
-        "repos": data["repositories"]["totalCount"],
         "total": data["contributionsCollection"]["contributionCalendar"]["totalContributions"],
-        "active": active,
+        "adrs": adr_count,
         "projects": [(data[f"p{i}"], note, tags) for i, (_, note, tags) in enumerate(PROJECTS)],
         "more": sorted(((data[f"m{i}"], name, note) for i, (_, name, note) in enumerate(MORE)),
                        key=lambda m: m[0]["createdAt"]),
@@ -164,12 +162,12 @@ def hero(d, portrait, t):
 
     stats = [
         (f"{d['total']:,}", "contributions"),
-        (f"{d['active']}", "active days"),
-        (f"{d['repos']}", "public repos"),
-        (f"{date.today().year - d['since']}+ yrs", "on github"),
+        (f"{d['adrs']}", "adrs written"),
+        (f"{len(PROJECTS) + len(MORE)}", "projects"),
+        (f"{AWARDS}", "awards"),
     ]
     stat_svg = []
-    for i, ((v, k), x) in enumerate(zip(stats, (48, 196, 316, 436))):
+    for i, ((v, k), x) in enumerate(zip(stats, (48, 196, 336, 446))):
         stat_svg.append(
             f'<g class="up" style="animation-delay:{1.1 + i * .12:.2f}s">'
             f'<text x="{x}" y="{h - 62}" class="m" font-size="24" font-weight="600" fill="{t["text"]}">{escape(v)}</text>'
