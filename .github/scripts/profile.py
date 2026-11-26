@@ -141,10 +141,11 @@ def label(x, y, text, t, anchor="start"):
 
 def hero(d, portrait, t):
     h = 380
-    ph = 332                                   # portrait box; portrait.py draws at 336x420
+    cx, cy, rr = W - 40 - 133, h / 2, 154      # orbit ring around the portrait
+    R = rr - 8                                 # everything inside the ring stays within this circle
+    ph = 300                                   # portrait box; portrait.py draws at 336x420
     pw = round(ph * 336 / 420)
-    px, py = W - 40 - pw, (h - ph) / 2
-    cx, cy, rr = px + pw / 2, h / 2, 154      # dashed orbit around the portrait
+    px, py = cx - pw / 2, cy + R - ph          # shoulders rest on the bottom of the circle
 
     stats = [
         (f"{d['total']:,}", "contributions"),
@@ -173,7 +174,7 @@ def hero(d, portrait, t):
 
     css = f"""
 .scan {{ animation: scan 6s linear infinite; }}
-@keyframes scan {{ from {{ transform: translateY(0); }} to {{ transform: translateY({ph:.0f}px); }} }}
+@keyframes scan {{ from {{ transform: translateY(0); }} to {{ transform: translateY({2 * R}px); }} }}
 .cur {{ animation: blink 1.1s steps(1) infinite; }}
 .live {{ animation: blink 2s ease-in-out infinite; }}
 .ring {{ transform-origin: {cx:.0f}px {cy:.0f}px; animation: spin 48s linear infinite; }}
@@ -182,8 +183,8 @@ def hero(d, portrait, t):
     body = f"""
 <defs>
 <linearGradient id="ink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{t['a1']}"/><stop offset=".65" stop-color="{t['a3']}"/><stop offset="1" stop-color="{t['a2']}"/></linearGradient>
-<radialGradient id="fadeg" cx=".5" cy=".45" r=".62"><stop offset=".7" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>
-<mask id="fade"><rect x="{px}" y="{py}" width="{pw}" height="{ph:.0f}" fill="url(#fadeg)"/></mask>
+<radialGradient id="fadeg"><stop offset=".8" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>
+<mask id="fade"><circle cx="{cx:.0f}" cy="{cy:.0f}" r="{R}" fill="url(#fadeg)"/></mask>
 </defs>
 {label(48, 40, "profile / living identity", t)}
 <line x1="48" y1="56" x2="{stats_end}" y2="56" stroke="{t['line']}"/>
@@ -195,12 +196,12 @@ def hero(d, portrait, t):
 <line x1="48" y1="{h - 100}" x2="{stats_end}" y2="{h - 100}" stroke="{t['line']}"/>
 {''.join(stat_svg)}
 <radialGradient id="halo"><stop offset="0" stop-color="{t['a3']}" stop-opacity=".16"/><stop offset="1" stop-color="{t['a3']}" stop-opacity="0"/></radialGradient>
-<ellipse cx="{cx:.0f}" cy="{cy:.0f}" rx="{rr + 60}" ry="{rr + 30}" fill="url(#halo)"/>
+<circle cx="{cx:.0f}" cy="{cy:.0f}" r="{R}" fill="url(#halo)"/>
 <g class="ring" fill="none" stroke="url(#g-hero)" stroke-linecap="round">
 <circle cx="{cx:.0f}" cy="{cy:.0f}" r="{rr}" stroke-width="1.5" stroke-opacity=".6" stroke-dasharray="90 28 0.01 28"/>
 <circle cx="{cx:.0f}" cy="{cy:.0f}" r="{rr + 9}" stroke-width="1" stroke-opacity=".16"/></g>
 <g mask="url(#fade)"><svg x="{px}" y="{py:.0f}" width="{pw}" height="{ph:.0f}" viewBox="0 0 336 420">{portrait}</svg>
-<rect class="scan" x="{px}" y="{py:.0f}" width="{pw}" height="2" fill="{t['a1']}" opacity=".45"/></g>
+<rect class="scan" x="{cx - R:.0f}" y="{cy - R:.0f}" width="{2 * R}" height="2" fill="{t['a1']}" opacity=".45"/></g>
 """
     return svg("hero", h, t, body, css, f"{NAME}: {ROLE}, {', '.join(TAGS)}. {LOCATION}.")
 
