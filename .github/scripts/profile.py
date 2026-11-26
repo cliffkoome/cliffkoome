@@ -144,6 +144,7 @@ def hero(d, portrait, t):
     ph = 332                                   # portrait box; portrait.py draws at 336x420
     pw = round(ph * 336 / 420)
     px, py = W - 40 - pw, (h - ph) / 2
+    cx, cy, rr = px + pw / 2, h / 2, 160      # dashed orbit around the portrait
 
     stats = [
         (f"{d['total']:,}", "contributions"),
@@ -175,6 +176,8 @@ def hero(d, portrait, t):
 @keyframes scan {{ from {{ transform: translateY(0); }} to {{ transform: translateY({ph:.0f}px); }} }}
 .cur {{ animation: blink 1.1s steps(1) infinite; }}
 .live {{ animation: blink 2s ease-in-out infinite; }}
+.ring {{ transform-origin: {cx:.0f}px {cy:.0f}px; animation: spin 40s linear infinite; }}
+@keyframes spin {{ to {{ transform: rotate(360deg); }} }}
 """
     body = f"""
 <defs>
@@ -191,6 +194,8 @@ def hero(d, portrait, t):
 <text x="48" y="254" class="m up" style="animation-delay:1.05s" font-size="12" fill="{t['muted']}">{escape(LOCATION)}  ·  EAT (UTC+3)  ·  @{USER}</text>
 <line x1="48" y1="{h - 100}" x2="{stats_end}" y2="{h - 100}" stroke="{t['line']}"/>
 {''.join(stat_svg)}
+<g class="ring"><circle cx="{cx:.0f}" cy="{cy:.0f}" r="{rr}" fill="none" stroke="{t['dim']}" stroke-dasharray="2 7"/>
+<circle cx="{cx:.0f}" cy="{cy - rr:.0f}" r="3.5" fill="{t['a1']}" class="live"/></g>
 <g mask="url(#fade)"><svg x="{px}" y="{py:.0f}" width="{pw}" height="{ph:.0f}" viewBox="0 0 336 420">{portrait}</svg>
 <rect class="scan" x="{px}" y="{py:.0f}" width="{pw}" height="2" fill="{t['a1']}" opacity=".45"/></g>
 """
