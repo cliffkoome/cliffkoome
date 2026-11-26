@@ -6,10 +6,10 @@ renders inside GitHub's image proxy with no scripts. Motion stops for people
 who ask for reduced motion: every element's resting state is its final state,
 and animations only run "from" an earlier state.
 
-Needs GITHUB_TOKEN (GraphQL requires auth). Standard library only.
+Needs GITHUB_TOKEN (GraphQL requires auth) and Pillow for the ASCII portrait.
 """
 
-import base64
+import io
 import json
 import os
 import urllib.request
@@ -46,22 +46,24 @@ THEMES = {
         "bg": "#0a0e16", "panel": "#0f1520", "line": "#1e2a3a", "text": "#e6edf3",
         "muted": "#7d8a9c", "dim": "#3a4658", "a1": "#2dd4bf", "a2": "#818cf8", "a3": "#38bdf8",
         "cell": ["#141c28", "#0e4a48", "#13756e", "#1fa597", "#2dd4bf"],
-        "duo": ((10, 14, 22), (45, 212, 191), (165, 180, 252)),
     },
     "light": {
         "bg": "#fbfcfe", "panel": "#f2f5f9", "line": "#dbe2ea", "text": "#14202e",
         "muted": "#5b6878", "dim": "#b6c0cc", "a1": "#0d9488", "a2": "#6366f1", "a3": "#0284c7",
         "cell": ["#e8edf3", "#a7e3db", "#5cc4b6", "#1d9f90", "#0b7a6e"],
-        "duo": ((251, 252, 254), (13, 148, 136), (99, 102, 241)),
     },
 }
 
-# Portrait tone map: (luminance, strength, hue) where hue 0 is a1-ish teal and
-# 1 is violet. Tuned to my avatar: face and hair sit around 0.25-0.35, the grey
-# backdrop around 0.45-0.6 and the shirt near 1.0, so the face is lifted to full
-# strength and the backdrop is pushed back to a faint texture.
-TONE = [(0, .2, 0), (.1, .45, 0), (.2, .75, 0), (.3, .95, 0), (.38, 1, 0), (.44, .22, .5),
-        (.62, .14, .5), (.75, .35, 1), (.9, .75, 1), (1, .95, 1)]
+# Portrait: "braille" (2x4 dots per character, finest detail) or "ascii"
+# (a classic character ramp).
+PORTRAIT = "braille"
+PORTRAIT_COLS = 60
+RAMP = " .:-=+*#%@"
+
+# Portrait tone map, luminance -> ink. Tuned to my avatar: face and hair sit
+# around 0.2-0.38 and are lifted to full ink, the grey backdrop (0.42-0.66) is
+# dropped to blank, and the white shirt is kept at half ink.
+TONE = [(0, .25), (.1, .5), (.2, .8), (.3, 1), (.38, 1), (.42, 0), (.66, 0), (.8, .35), (1, .6)]
 
 LEVELS = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2, "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
 
@@ -116,27 +118,32 @@ def fetch():
     }
 
 
-def avatar_data_uri(url):
-    """Inline the avatar: GitHub's image proxy blocks external images inside SVGs."""
-    with urllib.request.urlopen(url) as resp:
-        kind = resp.headers.get_content_type()
-        return f"data:{kind};base64,{base64.b64encode(resp.read()).decode()}"
+def portrait_lines(url):
+    """Turn the avatar into lines of text: braille dots or an ASCII ramp."""
+    from PIL import Image, ImageFilter
 
-
-def tone_tables(t, n=26):
-    bg, c0, c1 = t["duo"]
-    out = [[], [], []]
-    for k in range(n):
-        lum = k / (n - 1)
-        for (a, ia, ha), (b, ib, hb) in zip(TONE, TONE[1:]):
+    def tone(lum):
+        for (a, ia), (b, ib) in zip(TONE, TONE[1:]):
             if a <= lum <= b:
-                f = (lum - a) / (b - a)
-                strength, hue = ia + (ib - ia) * f, ha + (hb - ha) * f
-                break
-        for j in range(3):
-            c = c0[j] + (c1[j] - c0[j]) * hue
-            out[j].append(f"{(bg[j] + (c - bg[j]) * strength) / 255:.3f}")
-    return [" ".join(ch) for ch in out]
+                return ia + (ib - ia) * (lum - a) / (b - a)
+
+    with urllib.request.urlopen(url) as resp:
+        img = Image.open(io.BytesIO(resp.read())).convert("L")
+    side = img.width
+    img = img.crop((side * .075, 0, side * .925, side * .925))  # trim the edges, keep the face
+    img = img.point(lambda p: int(255 * tone(p / 255))).filter(ImageFilter.MedianFilter(3))
+    cols = PORTRAIT_COLS
+    rows = round(cols * img.height / img.width * 0.6)  # a character cell is 0.6em wide, 1em tall
+    if PORTRAIT == "ascii":
+        px = img.resize((cols, rows)).load()
+        n = len(RAMP) - 1
+        return [''.join(RAMP[round(px[x, y] / 255 * n)] for x in range(cols)) for y in range(rows)]
+    px = img.resize((cols * 2, rows * 4)).convert("1").load()  # Floyd-Steinberg dither
+    bits = [(0, 0, 1), (0, 1, 2), (0, 2, 4), (1, 0, 8), (1, 1, 16), (1, 2, 32), (0, 3, 64), (1, 3, 128)]
+    return [
+        ''.join(chr(0x2800 + sum(v for dx, dy, v in bits if px[cx + dx, cy + dy])) for cx in range(0, cols * 2, 2))
+        for cy in range(0, rows * 4, 4)
+    ]
 
 
 # ---------------------------------------------------------------- svg helpers
@@ -170,11 +177,17 @@ def label(x, y, text, t, anchor="start"):
 
 # ---------------------------------------------------------------- sections
 
-def hero(d, avatar, t):
+def hero(d, portrait, t):
     h = 380
-    pr = 138                      # portrait radius
-    cx, cy = W - 56 - pr, 54 + pr
-    r, g, b = tone_tables(t)
+    pw = 276                                   # portrait box width
+    fs = pw / PORTRAIT_COLS / 0.6              # font size that makes a row exactly pw wide
+    ph = len(portrait) * fs
+    px, py = W - 40 - pw, (h - ph) / 2
+    rows = "".join(
+        f'<text x="{px}" y="{py + (i + 1) * fs:.1f}" textLength="{pw}" lengthAdjust="spacing" '
+        f'class="row" style="animation-delay:{.2 + i * .035:.2f}s" xml:space="preserve">{escape(line)}</text>'
+        for i, line in enumerate(portrait)
+    )
 
     stats = [
         (f"{d['total']:,}", "contributions"),
@@ -202,21 +215,20 @@ def hero(d, avatar, t):
         x += w + 10
 
     css = f"""
-.face {{ animation: fade 2.2s ease-out backwards .2s; }}
-.scan {{ animation: scan 5s linear infinite; }}
-@keyframes scan {{ from {{ transform: translateY(0); }} to {{ transform: translateY({2 * pr}px); }} }}
-.ring {{ transform-origin: {cx}px {cy}px; animation: spin 40s linear infinite; }}
-@keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+.row {{ animation: type .5s steps(6) backwards; }}
+@keyframes type {{ from {{ opacity: 0; transform: translateX(-6px); }} }}
+.scan {{ animation: scan 6s linear infinite; }}
+@keyframes scan {{ from {{ transform: translateY(0); }} to {{ transform: translateY({ph:.0f}px); }} }}
+.ascii {{ animation: flicker 7s steps(1) infinite 4s; }}
+@keyframes flicker {{ 0%, 100% {{ opacity: 1; }} 2% {{ opacity: .72; }} 3% {{ opacity: 1; }} 51% {{ opacity: .85; }} 52% {{ opacity: 1; }} }}
 .cur {{ animation: blink 1.1s steps(1) infinite; }}
 .live {{ animation: blink 2s ease-in-out infinite; }}
 """
     body = f"""
 <defs>
-<filter id="duo" color-interpolation-filters="sRGB"><feColorMatrix type="saturate" values="0"/>
-<feComponentTransfer><feFuncR type="table" tableValues="{r}"/><feFuncG type="table" tableValues="{g}"/><feFuncB type="table" tableValues="{b}"/></feComponentTransfer></filter>
-<pattern id="dots" x="{cx - pr}" y="{cy - pr}" width="5" height="5" patternUnits="userSpaceOnUse"><circle cx="2.5" cy="2.5" r="2.05" fill="#fff"/></pattern>
-<mask id="halftone"><circle cx="{cx}" cy="{cy}" r="{pr}" fill="url(#dots)"/></mask>
-<clipPath id="pc"><circle cx="{cx}" cy="{cy}" r="{pr}"/></clipPath>
+<linearGradient id="ink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{t['a1']}"/><stop offset=".65" stop-color="{t['a3']}"/><stop offset="1" stop-color="{t['a2']}"/></linearGradient>
+<radialGradient id="fadeg" cx=".5" cy=".45" r=".62"><stop offset=".7" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>
+<mask id="fade"><rect x="{px}" y="{py}" width="{pw}" height="{ph:.0f}" fill="url(#fadeg)"/></mask>
 </defs>
 {label(48, 40, "profile / living identity", t)}
 <line x1="48" y1="56" x2="{stats_end}" y2="56" stroke="{t['line']}"/>
@@ -227,10 +239,8 @@ def hero(d, avatar, t):
 <text x="48" y="254" class="m up" style="animation-delay:1.05s" font-size="12" fill="{t['muted']}">{escape(LOCATION)}  ·  EAT (UTC+3)  ·  @{USER}</text>
 <line x1="48" y1="{h - 100}" x2="{stats_end}" y2="{h - 100}" stroke="{t['line']}"/>
 {''.join(stat_svg)}
-<g class="ring"><circle cx="{cx}" cy="{cy}" r="{pr + 14}" fill="none" stroke="{t['line']}" stroke-dasharray="2 7"/>
-<circle cx="{cx}" cy="{cy - pr - 14}" r="3.5" fill="{t['a1']}" class="live"/></g>
-<g class="face"><image href="{avatar}" x="{cx - pr}" y="{cy - pr}" width="{2 * pr}" height="{2 * pr}" preserveAspectRatio="xMidYMid slice" filter="url(#duo)" mask="url(#halftone)"/></g>
-<g clip-path="url(#pc)"><rect class="scan" x="{cx - pr}" y="{cy - pr - 3}" width="{2 * pr}" height="3" fill="{t['a1']}" opacity=".5"/></g>
+<g mask="url(#fade)"><g class="ascii m" font-size="{fs:.2f}" fill="url(#ink)">{rows}</g>
+<rect class="scan" x="{px}" y="{py:.0f}" width="{pw}" height="2" fill="{t['a1']}" opacity=".45"/></g>
 """
     return svg("hero", h, t, body, css, f"{NAME}: {ROLE}, {', '.join(TAGS)}. {LOCATION}.")
 
@@ -346,12 +356,12 @@ def activity(d, t):
 
 def main():
     d = fetch()
-    avatar = avatar_data_uri(d["avatar"])
+    portrait = portrait_lines(d["avatar"])
     totals = languages.language_totals()
     os.makedirs("assets/profile", exist_ok=True)
     for name, t in THEMES.items():
         out = {
-            "hero": hero(d, avatar, t),
+            "hero": hero(d, portrait, t),
             "focus": focus(t),
             "stack": stack(totals, t),
             "projects": projects(d, t),
