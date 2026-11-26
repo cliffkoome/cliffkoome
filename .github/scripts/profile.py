@@ -13,7 +13,6 @@ portrait is drawn once by portrait.py and read from assets/profile/portrait-*.sv
 import json
 import re
 import os
-import urllib.parse
 import urllib.request
 from datetime import date, datetime
 from html import escape
@@ -82,13 +81,10 @@ PORTRAIT_FILE = "assets/profile/portrait-{theme}.svg"  # written by portrait.py
 
 # ---------------------------------------------------------------- data
 
-def search_count(kind, q):
-    """Total hits for a GitHub search, e.g. merged PRs or commits in public repos."""
-    url = f"https://api.github.com/search/{kind}?per_page=1&q=" + urllib.parse.quote(q)
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
-                                               "Accept": "application/vnd.github+json"})
-    with urllib.request.urlopen(req) as resp:
-        return json.load(resp)["total_count"]
+def active_days(data, window):
+    """Days with at least one contribution in the last `window` days."""
+    days = [x for w in data["contributionsCollection"]["contributionCalendar"]["weeks"] for x in w["contributionDays"]]
+    return sum(1 for x in days[-window:] if x["contributionCount"])
 
 
 def graphql(query):
@@ -110,13 +106,12 @@ def fetch():
     names = " ".join(f'p{i}: repository(name: "{n}") {{ {fields} }}' for i, (n, _, _) in enumerate(PROJECTS))
     names += " " + " ".join(f'm{i}: repository(name: "{n}") {{ {fields} }}' for i, (n, _, _) in enumerate(MORE))
     data = graphql(f"""{{ user(login: "{USER}") {{
-        contributionsCollection {{ contributionCalendar {{ totalContributions }} }}
+        contributionsCollection {{ contributionCalendar {{ totalContributions weeks {{ contributionDays {{ date contributionCount }} }} }} }}
         {names}
     }} }}""")["user"]
     return {
         "total": data["contributionsCollection"]["contributionCalendar"]["totalContributions"],
-        "commits": search_count("commits", f"author:{USER} is:public"),
-        "prs": search_count("issues", f"is:pr author:{USER} is:merged is:public"),
+        "active30": active_days(data, 30),
         "projects": [(data[f"p{i}"], note, tags) for i, (_, note, tags) in enumerate(PROJECTS)],
         "more": sorted(((data[f"m{i}"], name, note) for i, (_, name, note) in enumerate(MORE)),
                        key=lambda m: m[0]["createdAt"]),
@@ -164,12 +159,11 @@ def hero(d, portrait, t):
 
     stats = [
         (f"{d['total']:,}", "contributions"),
-        (f"{d['commits']:,}", "commits"),
-        (f"{d['prs']:,}", "prs merged"),
+        (f"{d['active30']}/30", "days active, last 30"),
         (f"{d['langs']}", "languages"),
     ]
     stat_svg = []
-    for i, ((v, k), x) in enumerate(zip(stats, (48, 188, 310, 430))):
+    for i, ((v, k), x) in enumerate(zip(stats, (48, 200, 380))):
         stat_svg.append(
             f'<g class="up" style="animation-delay:{1.1 + i * .12:.2f}s">'
             f'<text x="{x}" y="{h - 62}" class="m" font-size="24" font-weight="600" fill="{t["text"]}">{escape(v)}</text>'
