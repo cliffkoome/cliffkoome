@@ -13,6 +13,7 @@ portrait is drawn once by portrait.py and read from assets/profile/portrait-*.sv
 import json
 import re
 import os
+import urllib.parse
 import urllib.request
 from datetime import date, datetime
 from html import escape
@@ -55,10 +56,6 @@ MORE = [
     ("local-llm-speedtune", "llm-speedtune", ["local LLMs 3.1x", "faster, by measuring"]),
 ]
 
-# Repos whose docs/adr folders are counted for the "adrs written" stat.
-ADR_REPOS = ["MatConnect", "InstaScreen"]
-AWARDS = 3  # hackathon awards listed in the README
-
 ICON_FOR = {"TypeScript": "typescript", "Python": "python", "C++": "cplusplus", "Go": "go",
             "JavaScript": "javascript", "Kotlin": "kotlin", "Dart": "dart"}
 
@@ -85,6 +82,15 @@ PORTRAIT_FILE = "assets/profile/portrait-{theme}.svg"  # written by portrait.py
 
 # ---------------------------------------------------------------- data
 
+def search_count(kind, q):
+    """Total hits for a GitHub search, e.g. merged PRs or commits in public repos."""
+    url = f"https://api.github.com/search/{kind}?per_page=1&q=" + urllib.parse.quote(q)
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+                                               "Accept": "application/vnd.github+json"})
+    with urllib.request.urlopen(req) as resp:
+        return json.load(resp)["total_count"]
+
+
 def graphql(query):
     req = urllib.request.Request(
         "https://api.github.com/graphql",
@@ -103,18 +109,14 @@ def fetch():
               "languages(first: 1, orderBy: {field: SIZE, direction: DESC}) { totalSize edges { size } }")
     names = " ".join(f'p{i}: repository(name: "{n}") {{ {fields} }}' for i, (n, _, _) in enumerate(PROJECTS))
     names += " " + " ".join(f'm{i}: repository(name: "{n}") {{ {fields} }}' for i, (n, _, _) in enumerate(MORE))
-    adrs = " ".join(f'a{i}: repository(name: "{n}") {{ object(expression: "HEAD:docs/adr") {{ ... on Tree {{ entries {{ name }} }} }} }}'
-                    for i, n in enumerate(ADR_REPOS))
     data = graphql(f"""{{ user(login: "{USER}") {{
         contributionsCollection {{ contributionCalendar {{ totalContributions }} }}
-        {adrs}
         {names}
     }} }}""")["user"]
-    adr_count = sum(1 for i in range(len(ADR_REPOS)) for e in (data[f"a{i}"]["object"] or {}).get("entries", [])
-                    if re.match(r"\d{4}-.+\.md$", e["name"]))
     return {
         "total": data["contributionsCollection"]["contributionCalendar"]["totalContributions"],
-        "adrs": adr_count,
+        "commits": search_count("commits", f"author:{USER}"),
+        "prs": search_count("issues", f"is:pr author:{USER} is:merged is:public"),
         "projects": [(data[f"p{i}"], note, tags) for i, (_, note, tags) in enumerate(PROJECTS)],
         "more": sorted(((data[f"m{i}"], name, note) for i, (_, name, note) in enumerate(MORE)),
                        key=lambda m: m[0]["createdAt"]),
@@ -162,12 +164,12 @@ def hero(d, portrait, t):
 
     stats = [
         (f"{d['total']:,}", "contributions"),
-        (f"{d['adrs']}", "adrs written"),
-        (f"{len(PROJECTS) + len(MORE)}", "projects"),
-        (f"{AWARDS}", "awards"),
+        (f"{d['commits']:,}", "commits"),
+        (f"{d['prs']:,}", "prs merged"),
+        (f"{d['langs']}", "languages"),
     ]
     stat_svg = []
-    for i, ((v, k), x) in enumerate(zip(stats, (48, 196, 336, 446))):
+    for i, ((v, k), x) in enumerate(zip(stats, (48, 188, 310, 430))):
         stat_svg.append(
             f'<g class="up" style="animation-delay:{1.1 + i * .12:.2f}s">'
             f'<text x="{x}" y="{h - 62}" class="m" font-size="24" font-weight="600" fill="{t["text"]}">{escape(v)}</text>'
@@ -180,8 +182,8 @@ def hero(d, portrait, t):
     for i, tag in enumerate(TAGS):
         w = 18 + len(tag) * 7.6
         tags.append(
-            f'<g class="up" style="animation-delay:{.8 + i * .1:.2f}s"><rect x="{x}" y="198" width="{w:.0f}" height="26" rx="13" fill="none" stroke="{t["line"]}"/>'
-            f'<text x="{x + w / 2:.0f}" y="215" class="m" font-size="12" text-anchor="middle" fill="{t["text"]}">{escape(tag)}</text></g>'
+            f'<g class="up" style="animation-delay:{.8 + i * .1:.2f}s"><rect x="{x}" y="212" width="{w:.0f}" height="26" rx="13" fill="none" stroke="{t["line"]}"/>'
+            f'<text x="{x + w / 2:.0f}" y="229" class="m" font-size="12" text-anchor="middle" fill="{t["text"]}">{escape(tag)}</text></g>'
         )
         x += w + 10
 
@@ -205,7 +207,6 @@ def hero(d, portrait, t):
 <text x="48" y="150" class="s up" style="animation-delay:.3s" font-size="50" font-weight="700" fill="url(#g-hero)">{escape(NAME)}</text>
 <text x="48" y="182" class="m up" style="animation-delay:.55s" font-size="16" fill="{t['text']}">{escape(ROLE)}<tspan class="cur" fill="{t['a1']}">_</tspan></text>
 {''.join(tags)}
-<text x="48" y="254" class="m up" style="animation-delay:1.05s" font-size="12" fill="{t['muted']}">{escape(LOCATION)}  ·  EAT (UTC+3)  ·  @{USER}</text>
 <line x1="48" y1="{h - 100}" x2="{stats_end}" y2="{h - 100}" stroke="{t['line']}"/>
 {''.join(stat_svg)}
 <radialGradient id="halo"><stop offset="0" stop-color="{t['a3']}" stop-opacity=".16"/><stop offset="1" stop-color="{t['a3']}" stop-opacity="0"/></radialGradient>
@@ -430,6 +431,7 @@ def main():
         with open(PORTRAIT_FILE.format(theme=theme)) as f:
             portrait[theme] = f.read()
     totals = languages.language_totals()
+    d["langs"] = len(totals)
     os.makedirs("assets/profile", exist_ok=True)
     for name, t in THEMES.items():
         out = {

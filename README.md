@@ -6,8 +6,6 @@
 I design systems where hardware, phones and cloud services must agree on what's true, even when
 networks drop, devices lie, or money is on the line.
 
-[koomekoome902@gmail.com](mailto:koomekoome902@gmail.com) ·
-[LinkedIn](https://www.linkedin.com/in/cliffkoome/) · [DEV](https://dev.to/megalodon)
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="assets/profile/focus-light.svg">
