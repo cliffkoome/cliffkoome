@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: [".github/scripts/**", ".github/workflows/profile.yml"]
+    paths: [".github/scripts/profile.py", ".github/scripts/languages.py", "assets/profile/portrait-*.svg", ".github/workflows/profile.yml"]
 
 permissions:
   contents: write
@@ -24,7 +24,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install pillow
       - run: python .github/scripts/profile.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

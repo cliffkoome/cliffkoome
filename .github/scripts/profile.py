@@ -6,10 +6,10 @@ renders inside GitHub's image proxy with no scripts. Motion stops for people
 who ask for reduced motion: every element's resting state is its final state,
 and animations only run "from" an earlier state.
 
-Needs GITHUB_TOKEN (GraphQL requires auth) and Pillow for the ASCII portrait.
+Needs GITHUB_TOKEN (GraphQL requires auth). Standard library only; the
+portrait is drawn once by portrait.py and read from assets/profile/portrait.svg.
 """
 
-import io
 import json
 import os
 import urllib.request
@@ -23,12 +23,6 @@ NAME = "Clifford Karani"
 ROLE = "Full-stack software engineer"
 TAGS = ["IoT", "Embedded systems", "Systems architecture"]
 LOCATION = "Nairobi, Kenya"
-
-FOCUS = [
-    ("Devices to cloud", "Hardware, phones and cloud services that agree on what's true."),
-    ("Built for failure", "Dropped networks and duplicate events are the normal case."),
-    ("Decisions on record", "Every trade-off written down as an ADR."),
-]
 
 # Featured repos, with a one-line note on the architecture worth a look.
 PROJECTS = [
@@ -54,16 +48,30 @@ THEMES = {
     },
 }
 
-# Portrait: "braille" (2x4 dots per character, finest detail) or "ascii"
-# (a classic character ramp).
-PORTRAIT = "braille"
-PORTRAIT_COLS = 60
-RAMP = " .:-=+*#%@"
-
-# Portrait tone map, luminance -> ink. Tuned to my avatar: face and hair sit
-# around 0.2-0.38 and are lifted to full ink, the grey backdrop (0.42-0.66) is
-# dropped to blank, and the white shirt is kept at half ink.
-TONE = [(0, .25), (.1, .5), (.2, .8), (.3, 1), (.38, 1), (.42, 0), (.66, 0), (.8, .35), (1, .6)]
+# Neofetch-style card (after Andrew Grant's profile). Static lines; the
+# languages and GitHub stats are filled in from live data.
+HANDLE = "clifford@karani"
+CARD_ABOUT = [
+    ("Role", "Full-stack software engineer"),
+    ("Focus", "IoT, embedded, systems architecture"),
+    ("Location", "Nairobi, Kenya (UTC+3)"),
+    ("Open.To", "Senior full-stack, IoT, platform"),
+]
+CARD_STACK = [
+    ("Hardware", "ESP32, Arduino, PlatformIO"),
+    ("Cloud", "Next.js, Postgres, Firebase, Prisma"),
+]
+CARD_WORK = [
+    ("MatConnect", "live matatu ETAs from GPS"),
+    ("InstaScreen", "cloud-synced ESP32 photo frame"),
+    ("typeghast", "typing game vs your agent"),
+]
+CARD_CONTACT = [
+    ("Email", "koomekoome902@gmail.com"),
+    ("LinkedIn", "cliffkoome"),
+    ("DEV", "megalodon"),
+]
+PORTRAIT_FILE = "assets/profile/portrait-{theme}.svg"  # written by portrait.py
 
 LEVELS = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2, "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
 
@@ -90,7 +98,7 @@ def fetch():
         for i, (n, _) in enumerate(PROJECTS)
     )
     data = graphql(f"""{{ user(login: "{USER}") {{
-        avatarUrl(size: 400) createdAt
+        createdAt
         repositories(ownerAffiliations: OWNER, privacy: PUBLIC, isFork: false) {{ totalCount }}
         contributionsCollection {{ contributionCalendar {{ totalContributions
             weeks {{ contributionDays {{ date contributionCount contributionLevel }} }} }} }}
@@ -107,7 +115,6 @@ def fetch():
         longest = max(longest, run)
     active = sum(1 for _, n, _ in days if n)
     return {
-        "avatar": data["avatarUrl"],
         "since": datetime.fromisoformat(data["createdAt"].replace("Z", "+00:00")).year,
         "repos": data["repositories"]["totalCount"],
         "total": data["contributionsCollection"]["contributionCalendar"]["totalContributions"],
@@ -116,34 +123,6 @@ def fetch():
         "active": active,
         "projects": [(data[f"p{i}"], note) for i, (_, note) in enumerate(PROJECTS)],
     }
-
-
-def portrait_lines(url):
-    """Turn the avatar into lines of text: braille dots or an ASCII ramp."""
-    from PIL import Image, ImageFilter
-
-    def tone(lum):
-        for (a, ia), (b, ib) in zip(TONE, TONE[1:]):
-            if a <= lum <= b:
-                return ia + (ib - ia) * (lum - a) / (b - a)
-
-    with urllib.request.urlopen(url) as resp:
-        img = Image.open(io.BytesIO(resp.read())).convert("L")
-    side = img.width
-    img = img.crop((side * .075, 0, side * .925, side * .925))  # trim the edges, keep the face
-    img = img.point(lambda p: int(255 * tone(p / 255))).filter(ImageFilter.MedianFilter(3))
-    cols = PORTRAIT_COLS
-    rows = round(cols * img.height / img.width * 0.6)  # a character cell is 0.6em wide, 1em tall
-    if PORTRAIT == "ascii":
-        px = img.resize((cols, rows)).load()
-        n = len(RAMP) - 1
-        return [''.join(RAMP[round(px[x, y] / 255 * n)] for x in range(cols)) for y in range(rows)]
-    px = img.resize((cols * 2, rows * 4)).convert("1").load()  # Floyd-Steinberg dither
-    bits = [(0, 0, 1), (0, 1, 2), (0, 2, 4), (1, 0, 8), (1, 1, 16), (1, 2, 32), (0, 3, 64), (1, 3, 128)]
-    return [
-        ''.join(chr(0x2800 + sum(v for dx, dy, v in bits if px[cx + dx, cy + dy])) for cx in range(0, cols * 2, 2))
-        for cy in range(0, rows * 4, 4)
-    ]
 
 
 # ---------------------------------------------------------------- svg helpers
@@ -177,99 +156,85 @@ def label(x, y, text, t, anchor="start"):
 
 # ---------------------------------------------------------------- sections
 
-def hero(d, portrait, t):
-    h = 380
-    pw = 276                                   # portrait box width
-    fs = pw / PORTRAIT_COLS / 0.6              # font size that makes a row exactly pw wide
-    ph = len(portrait) * fs
-    px, py = W - 40 - pw, (h - ph) / 2
-    rows = "".join(
-        f'<text x="{px}" y="{py + (i + 1) * fs:.1f}" textLength="{pw}" lengthAdjust="spacing" '
-        f'class="row" style="animation-delay:{.2 + i * .035:.2f}s" xml:space="preserve">{escape(line)}</text>'
-        for i, line in enumerate(portrait)
-    )
+def card(d, langs, portrait, t, name):
+    """Portrait on the left, neofetch-style key: value lines on the right."""
+    pad = 24
+    px, py, pw = pad, pad, 336                      # portrait box (matches portrait.py)
+    x0, fs, lh = px + pw + 28, 14, 18.6
+    cw = fs * .6
+    cols = int((W - x0 - pad) / (fs * .6))          # characters per line
+
+    def kv(key, value):
+        dots = max(2, cols - len(key) - len(value) - 4)
+        return [(". ", "dim"), (key, "key"), (": ", "dim"), ("." * dots + " ", "dot"), (value, "val")]
+
+    def head(text):
+        return [("- " + text + " ", "hd"), ("─" * (cols - len(text) - 3), "rule")]
 
     stats = [
-        (f"{d['total']:,}", "contributions"),
-        (f"{d['active']}", "active days"),
-        (f"{d['repos']}", "public repos"),
-        (f"{date.today().year - d['since']}+ yrs", "on github"),
+        ("Repos", f"{d['repos']}"), ("Contributions", f"{d['total']:,}"),
+        ("Active.Days", f"{d['active']}"), ("Longest.Streak", f"{d['longest']}d"),
     ]
-    stat_svg = []
-    for i, ((v, k), x) in enumerate(zip(stats, (48, 196, 316, 436))):
-        stat_svg.append(
-            f'<g class="up" style="animation-delay:{1.1 + i * .12:.2f}s">'
-            f'<text x="{x}" y="{h - 62}" class="m" font-size="24" font-weight="600" fill="{t["text"]}">{escape(v)}</text>'
-            f'<text x="{x}" y="{h - 40}" class="lab" font-size="10" letter-spacing="1.5">{escape(k.upper())}</text></g>'
-        )
-    stats_end = 516
+    half = (cols - 3) // 2
 
-    tags = []
-    x = 48
-    for i, tag in enumerate(TAGS):
-        w = 18 + len(tag) * 7.6
-        tags.append(
-            f'<g class="up" style="animation-delay:{.8 + i * .1:.2f}s"><rect x="{x}" y="198" width="{w:.0f}" height="26" rx="13" fill="none" stroke="{t["line"]}"/>'
-            f'<text x="{x + w / 2:.0f}" y="215" class="m" font-size="12" text-anchor="middle" fill="{t["text"]}">{escape(tag)}</text></g>'
-        )
-        x += w + 10
+    def pair(a, b):
+        left = kv(*a)
+        dots = max(2, half - len(a[0]) - len(a[1]) - 4)
+        left[3] = ("." * dots + " ", "dot")
+        right = kv(*b)
+        dots = max(2, cols - half - 3 - len(b[0]) - len(b[1]) - 4)
+        right[3] = ("." * dots + " ", "dot")
+        return left + [(" | ", "dim")] + right[1:]
+
+    lines = [[(HANDLE + " ", "handle"), ("─" * (cols - len(HANDLE) - 1), "rule")]]
+    lines += [kv(k, v) for k, v in CARD_ABOUT]
+    lines += [[]]
+    room = cols - len("Languages.Code") - 6
+    shown = []
+    for lang in langs:  # as many top languages as fit on the line
+        if len(", ".join(shown + [lang])) > room:
+            break
+        shown.append(lang)
+    lines += [kv("Languages.Code", ", ".join(shown))] + [kv(k, v) for k, v in CARD_STACK]
+    lines += [[]] + [head("Selected work")] + [kv(k, v) for k, v in CARD_WORK]
+    lines += [[]] + [head("Contact")] + [kv(k, v) for k, v in CARD_CONTACT]
+    lines += [[]] + [head("GitHub stats")] + [pair(stats[0], stats[1]), pair(stats[2], stats[3])]
+    lines += [kv("On.GitHub.Since", str(d["since"]))]
+
+    h = round(py + 14 + (len(lines) - 1) * lh + pad + 6)
+    rows = []
+    for i, parts in enumerate(lines):
+        # Every part gets its own x, so no renderer can collapse the spacing.
+        spans, at = [], 0
+        for txt, c in parts:
+            lead = len(txt) - len(txt.lstrip(" "))
+            if txt.strip():
+                spans.append(f'<tspan x="{x0 + (at + lead) * cw:.1f}" class="{c}">{escape(txt.strip())}</tspan>')
+            at += len(txt)
+        rows.append(f'<text y="{py + 14 + i * lh:.1f}" class="ln" style="animation-delay:{.4 + i * .07:.2f}s">{"".join(spans)}</text>')
+    cur_y = py + 14 + (len(lines) - 1) * lh
+    cur_x = x0 + sum(len(txt) for txt, _ in lines[-1]) * cw + 4
 
     css = f"""
-.row {{ animation: type .5s steps(6) backwards; }}
-@keyframes type {{ from {{ opacity: 0; transform: translateX(-6px); }} }}
-.scan {{ animation: scan 6s linear infinite; }}
-@keyframes scan {{ from {{ transform: translateY(0); }} to {{ transform: translateY({ph:.0f}px); }} }}
-.ascii {{ animation: flicker 7s steps(1) infinite 4s; }}
-@keyframes flicker {{ 0%, 100% {{ opacity: 1; }} 2% {{ opacity: .72; }} 3% {{ opacity: 1; }} 51% {{ opacity: .85; }} 52% {{ opacity: 1; }} }}
+.ln {{ font-family: {FONT}; font-size: {fs}px; animation: type .35s steps(4) backwards; }}
+@keyframes type {{ from {{ opacity: 0; transform: translateX(-4px); }} }}
+.handle {{ fill: url(#g-card); font-weight: 700; }}
+.key {{ fill: {t['a1']}; }}
+.val {{ fill: {t['text']}; }}
+.dot, .rule {{ fill: {t['dim']}; }}
+.dim {{ fill: {t['muted']}; }}
+.hd {{ fill: {t['a2']}; }}
 .cur {{ animation: blink 1.1s steps(1) infinite; }}
-.live {{ animation: blink 2s ease-in-out infinite; }}
+.frame {{ animation: fade 1.2s ease-out backwards; }}
 """
     body = f"""
-<defs>
-<linearGradient id="ink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{t['a1']}"/><stop offset=".65" stop-color="{t['a3']}"/><stop offset="1" stop-color="{t['a2']}"/></linearGradient>
-<radialGradient id="fadeg" cx=".5" cy=".45" r=".62"><stop offset=".7" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>
-<mask id="fade"><rect x="{px}" y="{py}" width="{pw}" height="{ph:.0f}" fill="url(#fadeg)"/></mask>
-</defs>
-{label(48, 40, "profile / living identity", t)}
-<line x1="48" y1="56" x2="{stats_end}" y2="56" stroke="{t['line']}"/>
-<g class="up" style="animation-delay:.15s">{label(48, 92, "hello, world. i'm", t)}</g>
-<text x="48" y="150" class="s up" style="animation-delay:.3s" font-size="50" font-weight="700" fill="url(#g-hero)">{escape(NAME)}</text>
-<text x="48" y="182" class="m up" style="animation-delay:.55s" font-size="16" fill="{t['text']}">{escape(ROLE)}<tspan class="cur" fill="{t['a1']}">_</tspan></text>
-{''.join(tags)}
-<text x="48" y="254" class="m up" style="animation-delay:1.05s" font-size="12" fill="{t['muted']}">{escape(LOCATION)}  ·  EAT (UTC+3)  ·  @{USER}</text>
-<line x1="48" y1="{h - 100}" x2="{stats_end}" y2="{h - 100}" stroke="{t['line']}"/>
-{''.join(stat_svg)}
-<g mask="url(#fade)"><g class="ascii m" font-size="{fs:.2f}" fill="url(#ink)">{rows}</g>
-<rect class="scan" x="{px}" y="{py:.0f}" width="{pw}" height="2" fill="{t['a1']}" opacity=".45"/></g>
+<defs><linearGradient id="ink" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="{t['a1']}"/><stop offset=".6" stop-color="{t['a3']}"/><stop offset="1" stop-color="{t['a2']}"/></linearGradient></defs>
+<rect class="frame" x="{px}" y="{py}" width="{pw}" height="{h - 2 * pad}" rx="10" fill="{t['panel']}" stroke="{t['line']}"/>
+<svg x="{px}" y="{py}" width="{pw}" height="{h - 2 * pad}" viewBox="0 0 {pw} 420" preserveAspectRatio="xMidYMax meet" overflow="hidden">{portrait[name]}</svg>
+{''.join(rows)}
+<rect class="cur" x="{cur_x:.1f}" y="{cur_y - 12:.1f}" width="8" height="15" fill="{t['a1']}"/>
 """
-    return svg("hero", h, t, body, css, f"{NAME}: {ROLE}, {', '.join(TAGS)}. {LOCATION}.")
-
-
-def focus(t):
-    h = 170
-    colw = (W - 96 - 40) / 3
-    cards = []
-    for i, (head, line) in enumerate(FOCUS):
-        x = 48 + i * (colw + 20)
-        words, lines, cur = line.split(), [], ""
-        for w_ in words:
-            if len(cur) + len(w_) > 34:
-                lines.append(cur)
-                cur = w_
-            else:
-                cur = f"{cur} {w_}".strip()
-        lines.append(cur)
-        tsp = "".join(f'<tspan x="{x + 18:.0f}" dy="{0 if j == 0 else 18}">{escape(l)}</tspan>' for j, l in enumerate(lines))
-        cards.append(
-            f'<g class="up" style="animation-delay:{.15 + i * .18:.2f}s">'
-            f'<rect x="{x:.0f}" y="56" width="{colw:.0f}" height="90" rx="10" fill="{t["panel"]}" stroke="{t["line"]}"/>'
-            f'<rect x="{x:.0f}" y="56" width="3" height="90" rx="1.5" fill="url(#g-focus)"/>'
-            f'<text x="{x + 18:.0f}" y="84" class="m" font-size="11" fill="{t["a1"]}">0{i + 1}</text>'
-            f'<text x="{x + 44:.0f}" y="84" class="s" font-size="15" font-weight="600" fill="{t["text"]}">{escape(head)}</text>'
-            f'<text y="110" class="s" font-size="12.5" fill="{t["muted"]}">{tsp}</text></g>'
-        )
-    body = f'{label(48, 38, "current focus", t)}{"".join(cards)}'
-    return svg("focus", h, t, body, title="Current focus: " + "; ".join(f"{a}: {b}" for a, b in FOCUS))
+    return svg("card", h, t, body, css, f"{NAME}: {ROLE}. {', '.join(TAGS)}. {LOCATION}.")
 
 
 def stack(totals, t):
@@ -356,13 +321,16 @@ def activity(d, t):
 
 def main():
     d = fetch()
-    portrait = portrait_lines(d["avatar"])
+    portrait = {}
+    for theme in THEMES:
+        with open(PORTRAIT_FILE.format(theme=theme)) as f:
+            portrait[theme] = f.read()
     totals = languages.language_totals()
+    langs = [l for l, _ in totals.most_common(8)]
     os.makedirs("assets/profile", exist_ok=True)
     for name, t in THEMES.items():
         out = {
-            "hero": hero(d, portrait, t),
-            "focus": focus(t),
+            "card": card(d, langs, portrait, t, name),
             "stack": stack(totals, t),
             "projects": projects(d, t),
             "activity": activity(d, t),

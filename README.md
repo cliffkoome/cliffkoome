@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: light)" srcset="assets/profile/hero-light.svg">
-  <img width="100%" alt="Clifford Karani: full-stack software engineer, IoT, embedded systems and systems architecture. Nairobi, Kenya." src="assets/profile/hero-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/profile/card-light.svg">
+  <img width="100%" alt="Clifford Karani: full-stack software engineer, IoT, embedded systems and systems architecture. Nairobi, Kenya." src="assets/profile/card-dark.svg">
 </picture>
 
 I design systems where hardware, phones and cloud services must agree on what's true, even when
@@ -9,11 +9,6 @@ networks drop, devices lie, or money is on the line.
 Nairobi, Kenya (EAT, UTC+3) · Open to senior full-stack, IoT and platform roles ·
 [koomekoome902@gmail.com](mailto:koomekoome902@gmail.com) · [DEV](https://dev.to/megalodon) ·
 [LinkedIn](https://www.linkedin.com/in/cliffkoome/)
-
-<picture>
-  <source media="(prefers-color-scheme: light)" srcset="assets/profile/focus-light.svg">
-  <img width="100%" alt="Current focus: devices to cloud, built for failure, decisions on record" src="assets/profile/focus-dark.svg">
-</picture>
 
 #### Selected work
 
