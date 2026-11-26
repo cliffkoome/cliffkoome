@@ -8,7 +8,7 @@ I build software that talks to hardware, and lately I spend just as much time tr
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="assets/profile/focus-light.svg">
-  <img width="100%" alt="Current focus: security (finding and fixing vulnerabilities), hardware design (schematics and boards), training and fine-tuning ML models" src="assets/profile/focus-dark.svg">
+  <img width="100%" alt="Current focus: security (finding and fixing vulnerabilities), hardware design (schematics and boards), on-device ML (learning to train models, then optimising them for small devices)" src="assets/profile/focus-dark.svg">
 </picture>
 
 <picture>

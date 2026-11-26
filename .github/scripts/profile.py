@@ -28,7 +28,7 @@ LOCATION = "Nairobi, Kenya"
 FOCUS = [
     ("Security", "Finding vulnerabilities and fixing them, offence and defence."),
     ("Hardware design", "Drawing schematics and boards, not just wiring dev kits."),
-    ("Training models", "Building and fine-tuning my own ML models, from the data up."),
+    ("On-device ML", "Learning to train models, then making them fast on small devices."),
 ]
 
 # Selected work: repo, two short lines about it, tags to show (chosen here, not
