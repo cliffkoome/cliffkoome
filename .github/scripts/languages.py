@@ -1,6 +1,6 @@
-"""Render a "most used languages" card from my public repositories.
+"""Language totals and Linguist colours for my public repositories.
 
-Writes assets/languages-light.svg and assets/languages-dark.svg. Only public,
+Used by profile.py for the stack section. Only public,
 non-fork repositories are counted, plus the repos in EXTRA_REPOS that I
 contribute to under someone else's account.
 """

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="410" viewBox="0 0 860 410" role="img" aria-label="Selected work: MatConnect, InstaScreen, typeghast">
+<title>Selected work: MatConnect, InstaScreen, typeghast</title>
+<defs>
+<linearGradient id="g-projects" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0d9488"/><stop offset="1" stop-color="#6366f1"/></linearGradient>
+</defs>
+<style>
+.m { font-family: ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, Consolas, monospace; }
+.s { font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; }
+.lab { font-family: ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 2.5px; fill: #5b6878; }
+.up { animation: up .9s cubic-bezier(.2,.7,.2,1) backwards; }
+@keyframes up { from { opacity: 0; transform: translateY(8px); } }
+@keyframes fade { from { opacity: 0; } }
+@keyframes blink { 50% { opacity: .25; } }
+.trace { stroke-dasharray: 4 6; animation: flow 1.6s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -20; } }
+.node { animation: blink 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+<rect x="0.5" y="0.5" width="859" height="409" rx="14" fill="#fbfcfe" stroke="#dbe2ea"/>
+<text x="48" y="38" class="lab" text-anchor="start">SELECTED WORK / PROJECT CONSTELLATION</text><line class="trace" x1="64" y1="86" x2="64" y2="278" stroke="#b6c0cc" stroke-width="1.5"/><g class="up" style="animation-delay:0.15s"><circle cx="64" cy="86" r="7" fill="#fbfcfe" stroke="#3178c6" stroke-width="2"/><circle cx="64" cy="86" r="3" fill="#3178c6" class="node" style="animation-delay:0.0s"/><rect x="92" y="60" width="720" height="80" rx="10" fill="#f2f5f9" stroke="#dbe2ea"/><text x="112" y="90" class="s" font-size="17" font-weight="650" fill="#14202e">MatConnect</text><text x="792" y="90" class="m" font-size="11" text-anchor="end" fill="#5b6878">updated Nov 2026</text><text x="112" y="112" class="s" font-size="12.5" fill="#5b6878">Live GPS kept apart from the Postgres system of record; a leased ETA job safe on VM, cron or many instances.</text><text x="112" y="130" class="m" font-size="11" fill="#0d9488">TypeScript   ·   #better-auth  #eta  #firebase</text></g><g class="up" style="animation-delay:0.35s"><circle cx="64" cy="182" r="7" fill="#fbfcfe" stroke="#f34b7d" stroke-width="2"/><circle cx="64" cy="182" r="3" fill="#f34b7d" class="node" style="animation-delay:0.6s"/><rect x="92" y="156" width="720" height="80" rx="10" fill="#f2f5f9" stroke="#dbe2ea"/><text x="112" y="186" class="s" font-size="17" font-weight="650" fill="#14202e">InstaScreen</text><text x="792" y="186" class="m" font-size="11" text-anchor="end" fill="#5b6878">updated Nov 2026</text><text x="112" y="208" class="s" font-size="12.5" fill="#5b6878">Checksummed wire format chunked through Firebase to fit ~320 KB of SRAM; ETag compare-and-set, no backend.</text><text x="112" y="226" class="m" font-size="11" fill="#0d9488">C++   ·   #arduino  #cli  #embedded-cpp</text></g><g class="up" style="animation-delay:0.55s"><circle cx="64" cy="278" r="7" fill="#fbfcfe" stroke="#00ADD8" stroke-width="2"/><circle cx="64" cy="278" r="3" fill="#00ADD8" class="node" style="animation-delay:1.2s"/><rect x="92" y="252" width="720" height="80" rx="10" fill="#f2f5f9" stroke="#dbe2ea"/><text x="112" y="282" class="s" font-size="17" font-weight="650" fill="#14202e">typeghast</text><text x="792" y="282" class="m" font-size="11" text-anchor="end" fill="#5b6878">updated Oct 2026</text><text x="112" y="304" class="s" font-size="12.5" fill="#5b6878">Tails coding-agent logs live; a local Gemma model writes the text to type. Nothing leaves the machine.</text><text x="112" y="322" class="m" font-size="11" fill="#0d9488">Go   ·   #bubbletea  #coding-agents  #context-window</text></g><text x="812" y="384" class="m" font-size="11" text-anchor="end" fill="#5b6878">architecture notes and ADRs in each repo →</text>
+</svg>

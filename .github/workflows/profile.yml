@@ -1,4 +1,4 @@
-name: Update language card
+name: Update profile sections
 
 on:
   schedule:
@@ -6,14 +6,14 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: [".github/scripts/languages.py", ".github/workflows/languages.yml"]
+    paths: [".github/scripts/**", ".github/workflows/profile.yml"]
 
 permissions:
   contents: write
 
-# Queue overlapping runs so two of them never race to push the card.
+# Queue overlapping runs so two of them never race to push the assets.
 concurrency:
-  group: language-card
+  group: profile-sections
   cancel-in-progress: false
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python .github/scripts/languages.py
+      - run: python .github/scripts/profile.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Commit if changed
@@ -33,6 +33,6 @@ jobs:
           if git diff --cached --quiet; then exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Update language card"
+          git commit -m "Update profile sections"
           git pull --rebase
           git push
