@@ -27,14 +27,18 @@ LOCATION = "Nairobi, Kenya"
 FOCUS = [
     ("Devices to cloud", "Hardware, phones and cloud services that agree on what's true."),
     ("Built for failure", "Dropped networks and duplicate events are the normal case."),
-    ("Decisions on record", "Every trade-off written down as an ADR."),
+    ("Decisions on record", "Trade-offs written down as ADRs, with a scaling plan."),
 ]
 
-# Featured repos, with a one-line note on the architecture worth a look.
+# Featured repos, with a one-line note on the architecture worth a look and
+# the tags to show (chosen here, not taken from repo topics, so they stay accurate).
 PROJECTS = [
-    ("MatConnect", "Live GPS kept apart from the Postgres system of record; a leased ETA job safe on VM, cron or many instances."),
-    ("InstaScreen", "Checksummed wire format chunked through Firebase to fit ~320 KB of SRAM; ETag compare-and-set, no backend."),
-    ("typeghast", "Tails coding-agent logs live; a local Gemma model writes the text to type. Nothing leaves the machine."),
+    ("MatConnect", "Live GPS kept apart from the Postgres system of record; a leased ETA job safe on VM, cron or many instances.",
+     ["neon-postgres", "prisma", "firebase-rtdb"]),
+    ("InstaScreen", "Checksummed wire format chunked through Firebase to fit ~320 KB of SRAM; ETag compare-and-set, no backend.",
+     ["esp32", "platformio", "python"]),
+    ("typeghast", "Tails coding-agent logs live; a local Gemma model writes the text to type. Nothing leaves the machine.",
+     ["bubbletea", "ollama", "gemma"]),
 ]
 
 W = 860
@@ -76,9 +80,8 @@ def graphql(query):
 
 def fetch():
     names = " ".join(
-        f'p{i}: repository(name: "{n}") {{ name url description pushedAt primaryLanguage {{ name color }} '
-        f'repositoryTopics(first: 4) {{ nodes {{ topic {{ name }} }} }} }}'
-        for i, (n, _) in enumerate(PROJECTS)
+        f'p{i}: repository(name: "{n}") {{ name url description pushedAt primaryLanguage {{ name color }} }}'
+        for i, (n, _, _) in enumerate(PROJECTS)
     )
     data = graphql(f"""{{ user(login: "{USER}") {{
         createdAt
@@ -104,7 +107,7 @@ def fetch():
         "weeks": weeks,
         "longest": longest,
         "active": active,
-        "projects": [(data[f"p{i}"], note) for i, (_, note) in enumerate(PROJECTS)],
+        "projects": [(data[f"p{i}"], note, tags) for i, (_, note, tags) in enumerate(PROJECTS)],
     }
 
 
@@ -258,10 +261,10 @@ def stack(totals, t):
 def projects(d, t):
     h = 122 + len(d["projects"]) * 96
     rows = []
-    for i, (p, note) in enumerate(d["projects"]):
+    for i, (p, note, tags) in enumerate(d["projects"]):
         y = 60 + i * 96
         lang = p["primaryLanguage"] or {"name": "", "color": t["muted"]}
-        topics = [n["topic"]["name"] for n in p["repositoryTopics"]["nodes"]][:3]
+        topics = tags
         pushed = datetime.fromisoformat(p["pushedAt"].replace("Z", "+00:00")).strftime("%b %Y")
         meta = f"{lang['name']}   ·   {'  '.join('#' + x for x in topics)}" if topics else lang["name"]
         rows.append(
@@ -282,9 +285,9 @@ def projects(d, t):
         f'{label(48, 38, "selected work / project constellation", t)}'
         f'<line class="trace" x1="64" y1="86" x2="64" y2="{line_end}" stroke="{t["dim"]}" stroke-width="1.5"/>'
         + "".join(rows)
-        + f'<text x="{W - 48}" y="{h - 26}" class="m" font-size="11" text-anchor="end" fill="{t["muted"]}">architecture notes and ADRs in each repo →</text>'
+        + f'<text x="{W - 48}" y="{h - 26}" class="m" font-size="11" text-anchor="end" fill="{t["muted"]}">design decisions (ADRs) in MatConnect and InstaScreen →</text>'
     )
-    return svg("projects", h, t, body, css, "Selected work: " + ", ".join(p["name"] for p, _ in d["projects"]))
+    return svg("projects", h, t, body, css, "Selected work: " + ", ".join(p["name"] for p, _, _ in d["projects"]))
 
 
 def activity(d, t):
