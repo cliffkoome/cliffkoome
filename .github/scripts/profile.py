@@ -7,7 +7,7 @@ who ask for reduced motion: every element's resting state is its final state,
 and animations only run "from" an earlier state.
 
 Needs GITHUB_TOKEN (GraphQL requires auth). Standard library only; the
-portrait is drawn once by portrait.py and read from assets/profile/portrait-*.svg.
+icons inside the ring are drawn once by emblems.py and read from assets/profile/emblems.svg.
 """
 
 import json
@@ -75,7 +75,7 @@ THEMES = {
     },
 }
 
-PORTRAIT_FILE = "assets/profile/portrait-{theme}.svg"  # written by portrait.py
+EMBLEMS_FILE = "assets/profile/emblems.svg"  # written by emblems.py
 
 
 
@@ -149,13 +149,17 @@ def label(x, y, text, t, anchor="start"):
 
 # ---------------------------------------------------------------- sections
 
-def hero(d, portrait, t):
+def hero(d, emblems, t):
     h = 380
-    cx, cy, rr = W - 40 - 133, h / 2, 154      # orbit ring around the portrait
+    cx, cy, rr = W - 40 - 133, h / 2, 154      # orbit ring around the icons
     R = rr - 18                                # everything inside the ring stays within this circle, with a gap
-    ph = round(2 * R * 1.03)                   # portrait box; portrait.py draws at 336x420
-    pw = round(ph * 336 / 420)
-    px, py = cx - pw / 2, cy + R - ph          # shoulders rest on the bottom of the circle
+    # Icons for my areas cycle inside the ring. Each slot, the scan line sweeps
+    # down once and prints the next icon over the last one, row by row.
+    n, slot, sweep = len(emblems), 4, 1.6      # icons, seconds per icon, seconds per sweep
+    es = 172                                   # icon size (emblems.py draws at 240x240)
+    ex, ey = cx - es / 2, cy - es / 2 - 16
+    cyc = n * slot
+    a, b = 100 * sweep / cyc, 100 * slot / cyc  # sweep end and slot end, as % of the cycle
 
     stats = [  # value, label, optional second line
         (f"{d['total']:,}", "contributions", ""),
@@ -184,13 +188,29 @@ def hero(d, portrait, t):
         x += w + 10
 
     css = f"""
-.scan {{ animation: scan 6s linear infinite; }}
-@keyframes scan {{ from {{ transform: translateY(0); }} to {{ transform: translateY({2 * R}px); }} }}
+.scan {{ opacity: 0; animation: scan {slot}s linear infinite; }}
+@keyframes scan {{ 0% {{ transform: translateY(0); opacity: .5; }} {100 * sweep / slot:.2f}% {{ transform: translateY({2 * R}px); opacity: .5; }}
+  {100 * sweep / slot + .01:.2f}%, 100% {{ transform: translateY({2 * R}px); opacity: 0; }} }}
+.em {{ clip-path: inset(100% 0 0 0); animation: em {cyc}s linear infinite backwards; }}
+.em.e0 {{ clip-path: inset(0 0 0 0); }}
+@keyframes em {{ 0% {{ opacity: 1; clip-path: inset(0 0 100% 0); }} {a:.3f}%, {b:.3f}% {{ opacity: 1; clip-path: inset(0 0 0 0); }}
+  {b + a:.3f}% {{ opacity: 1; clip-path: inset(100% 0 0 0); }} {b + a + .01:.3f}%, 100% {{ opacity: 0; clip-path: inset(100% 0 0 0); }} }}
+.el {{ animation: el {cyc}s linear infinite backwards; }}
+@keyframes el {{ 0%, {a * .35:.3f}% {{ opacity: 0; }} {a * .8:.3f}%, {b:.3f}% {{ opacity: 1; }} {b + a * .3:.3f}%, 100% {{ opacity: 0; }} }}
 .cur {{ animation: blink 1.1s steps(1) infinite; }}
 .live {{ animation: blink 2s ease-in-out infinite; }}
 .ring {{ transform-origin: {cx:.0f}px {cy:.0f}px; animation: spin 48s linear infinite; }}
 @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
 """
+    icons = "".join(
+        f'<g class="em e{i}" style="animation-delay:{i * slot}s"{"" if i == 0 else ' opacity="0"'}>'
+        f'<rect x="{cx - R:.0f}" y="{cy - R:.0f}" width="{2 * R}" height="{2 * R}" fill="none"/>'
+        f'<svg x="{ex:.0f}" y="{ey:.0f}" width="{es}" height="{es}" viewBox="0 0 240 240">{g}</svg></g>'
+        for i, (_, g) in enumerate(emblems))
+    icons += "".join(
+        f'<text class="el e{i} lab" style="animation-delay:{i * slot}s;fill:{t["a1"]}"{"" if i == 0 else ' opacity="0"'} x="{cx:.0f}" y="{cy + R - 34:.0f}" '
+        f'text-anchor="middle" font-size="11" letter-spacing="3">{escape(lab.upper())}</text>'
+        for i, (lab, _) in enumerate(emblems))
     body = f"""
 <defs>
 <linearGradient id="ink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{t['a1']}"/><stop offset=".65" stop-color="{t['a3']}"/><stop offset="1" stop-color="{t['a2']}"/></linearGradient>
@@ -210,7 +230,7 @@ def hero(d, portrait, t):
 <g class="ring" fill="none" stroke="url(#g-hero)" stroke-linecap="round">
 <circle cx="{cx:.0f}" cy="{cy:.0f}" r="{rr}" stroke-width="1.5" stroke-opacity=".6" stroke-dasharray="90 28 0.01 28"/>
 <circle cx="{cx:.0f}" cy="{cy:.0f}" r="{rr + 9}" stroke-width="1" stroke-opacity=".16"/></g>
-<g mask="url(#fade)"><svg x="{px}" y="{py:.0f}" width="{pw}" height="{ph:.0f}" viewBox="0 0 336 420">{portrait}</svg>
+<g mask="url(#fade)">{icons}
 <rect class="scan" x="{cx - R:.0f}" y="{cy - R:.0f}" width="{2 * R}" height="2" fill="{t['a1']}" opacity=".45"/></g>
 """
     return svg("hero", h, t, body, css, f"{NAME}: {ROLE}, {', '.join(TAGS)}. {LOCATION}.")
@@ -422,16 +442,14 @@ def more(d, t):
 
 def main():
     d = fetch()
-    portrait = {}
-    for theme in THEMES:
-        with open(PORTRAIT_FILE.format(theme=theme)) as f:
-            portrait[theme] = f.read()
+    with open(EMBLEMS_FILE) as f:
+        emblems = re.findall(r'<g data-label="([^"]+)" fill="url\(#ink\)">(.*?)</g>', f.read())
     totals = languages.language_totals()
     d["langs"] = len(totals)
     os.makedirs("assets/profile", exist_ok=True)
     for name, t in THEMES.items():
         out = {
-            "hero": hero(d, portrait[name], t),
+            "hero": hero(d, [(l, f'<g fill="url(#ink)">{g}</g>') for l, g in emblems], t),
             "focus": focus(t),
             "toolbox": toolbox(totals, t),
             "projects": projects(d, t),
